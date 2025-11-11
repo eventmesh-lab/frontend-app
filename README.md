@@ -68,6 +68,13 @@ VITE_KEYCLOAK_URL=https://keycloak.example.com
 VITE_KEYCLOAK_CLIENT_ID=eventhub-frontend
 ```
 
-## 📝 Migración de Next.js a Vite
+## 📚 Documentación del proyecto
 
-Este proyecto fue originalmente generado con v0.app usando Next.js y ha sido migrado a React puro con Vite para mayor simplicidad y rendimiento.
+Se añadió una carpeta `docs/` con documentación de desarrollo (setup, mocks, arquitectura y enlaces a los endpoints API).
+
+Revisa `docs/README.md` para el índice y los archivos individuales:
+
+- `docs/SETUP.md` — cómo ejecutar el frontend y notas sobre el backend en un repo aparte.
+- `docs/MOCKS.md` — lista de adaptadores mock y cómo reemplazarlos.
+- `docs/ARCHITECTURE.md` — visión general de la arquitectura y puntos de entrada.
+- `API_ENDPOINTS.md` — especificación rápida de endpoints (archivo en la raíz).
