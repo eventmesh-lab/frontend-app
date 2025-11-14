@@ -12,85 +12,111 @@ import DetalleEventoPage from "./presentation/pages/DetalleEventoPage"
 import MisReservasPage from "./presentation/pages/MisReservasPage"
 import OrganizadorDashboardPage from "./presentation/pages/OrganizadorDashboardPage"
 import AdminDashboardPage from "./presentation/pages/AdminDashboardPage"
+import ProfileUserPage from "./presentation/pages/ProfileUserPage"
 import { RoleType } from "./domain/entities/Usuario"
+import React from "react"
+import ReactDOM from "react-dom/client"
+import UpdateUserPage from "./presentation/pages/UpdateUserPage"
 
 function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <Routes>
-            {/* Rutas públicas */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/registro" element={<RegistroPage />} />
-            <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+    return (
+        <Router>
+            <AuthProvider>
+                <NotificationProvider>
+                    <Routes>
+                        {/* Rutas públicas */}
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/registro" element={<RegistroPage />} />
+                        <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
-            {/* Rutas públicas */}
-            <Route
-              path="/"
-              element={
-                <MainLayout>
-                  <HomePage />
-                </MainLayout>
-              }
-            />
+                        {/* Rutas públicas */}
+                        <Route
+                            path="/"
+                            element={
+                                <MainLayout>
+                                    <HomePage />
+                                </MainLayout>
+                            }
+                        />
 
-            <Route
-              path="/eventos"
-              element={
-                <MainLayout>
-                  <EventosPage />
-                </MainLayout>
-              }
-            />
+                        <Route
+                            path="/eventos"
+                            element={
+                                <MainLayout>
+                                    <EventosPage />
+                                </MainLayout>
+                            }
+                        />
 
-            <Route
-              path="/eventos/:id"
-              element={
-                <MainLayout>
-                  <DetalleEventoPage />
-                </MainLayout>
-              }
-            />
+                        <Route
+                            path="/eventos/:id"
+                            element={
+                                <MainLayout>
+                                    <DetalleEventoPage />
+                                </MainLayout>
+                            }
+                        />
 
-            {/* Rutas protegidas - usuario */}
-            <Route
-              path="/mis-reservas"
-              element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <MisReservasPage />
-                  </MainLayout>
-                </PrivateRoute>
-              }
-            />
+                        {/* Rutas protegidas - usuario */}
+                        <Route
+                            path="/mis-reservas"
+                            element={
+                                <PrivateRoute>
+                                    <MainLayout>
+                                        <MisReservasPage />
+                                    </MainLayout>
+                                </PrivateRoute>
+                            }
+                        />
 
-            {/* Rutas protegidas - organizador */}
-            <Route
-              path="/organizador"
-              element={
-                <PrivateRoute requiredRole={RoleType.ORGANIZADOR}>
-                  <OrganizadorDashboardPage />
-                </PrivateRoute>
-              }
-            />
+                        {/* Rutas protegidas - organizador */}
+                        <Route
+                            path="/organizador"
+                            element={
+                                <PrivateRoute requiredRole="Organizador">
+                                    <OrganizadorDashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
 
-            {/* Rutas protegidas - admin */}
-            <Route
-              path="/admin"
-              element={
-                <PrivateRoute requiredRole={RoleType.ADMIN}>
-                  <AdminDashboardPage />
-                </PrivateRoute>
-              }
-            />
+                        {/* Rutas protegidas - admin */}
+                        <Route
+                            path="/admin"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <AdminDashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        {/* Rutas protegidas  */}
+                        <Route
+                            path="/perfil"
+                            element={
+                                <PrivateRoute>
+                                    <MainLayout>
+                                        <ProfileUserPage />
+                                    </MainLayout>
+                                </PrivateRoute>
+                            }
+                        />
+                        {/* Rutas protegidas  */}
+                        <Route
+                            path="/actualizarPerfil"
+                            element={
+                                <PrivateRoute>
+                                    <MainLayout>
+                                        <UpdateUserPage />
+                                    </MainLayout>
+                                </PrivateRoute>
+                            }
+                        />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </NotificationProvider>
-      </AuthProvider>
-    </Router>
-  )
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </NotificationProvider>
+            </AuthProvider>
+        </Router>
+    )
 }
 
 export default App

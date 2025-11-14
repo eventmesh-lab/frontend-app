@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useAuth } from "../contexts/AuthContext"
+import  useAuth  from "../contexts/Auth"
 import { useEventos } from "../hooks/useEventos"
 import OrganizadorLayout from "../layouts/OrganizadorLayout"
 import EventoCard from "../components/eventos/EventoCard"
@@ -12,14 +12,15 @@ import Button from "../components/ui/Button"
 import { Link } from "react-router-dom"
 
 export default function OrganizadorDashboardPage() {
-  const { usuario } = useAuth()
+  const { username } = useAuth()
   const { eventos, isLoading, obtenerMisEventos, publicarEvento } = useEventos()
 
   useEffect(() => {
-    if (usuario) {
-      obtenerMisEventos(usuario.id)
+      if (username) {
+          console.log("Entraste al dashboard de Organizador");
+       //   obtenerMisEventos(username.id)
     }
-  }, [usuario, obtenerMisEventos])
+  }, [username, obtenerMisEventos])
 
   const eventosPublicados = eventos.filter((e) => e.estado === "publicado")
   const eventosBorrador = eventos.filter((e) => e.estado === "borrador")

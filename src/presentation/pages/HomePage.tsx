@@ -1,12 +1,19 @@
 "use client"
 
 import { Link } from "react-router-dom"
-import { useAuth } from "../contexts/AuthContext"
+//import { useAuth } from "../contexts/AuthContext"
+import useAuth from "../contexts/Auth"
 import { ArrowRight, Calendar, Users, Zap, Lock, TrendingUp, Bell } from "lucide-react"
+import { useEffect } from "react"
 
 export default function HomePage() {
-  const { isAuthenticated, usuario } = useAuth()
+    const { isAuthenticated, username, role } = useAuth()
 
+    useEffect(() => {
+        console.log("Username:", username)
+        console.log("Role:", role)
+        console.log("isAuthenticated:", isAuthenticated)
+    }, [username, role, isAuthenticated])
   return (
     <div className="space-y-12">
       {/* Hero Section */}
@@ -37,7 +44,7 @@ export default function HomePage() {
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 )}
-                {isAuthenticated && usuario?.esOrganizador() && (
+                {isAuthenticated && role == "Organizador " && (
                   <Link
                     to="/organizador"
                     className="px-8 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-colors inline-flex items-center gap-2 justify-center"
@@ -92,7 +99,7 @@ export default function HomePage() {
                     Crear Cuenta
                   </h3>
                 </div>
-                <p className="text-text-secondary">Regístrate para hacer reservas y gestionar eventos</p>
+                <p className="text-text-secondary">Regístrate para hacer reservas</p>
               </Link>
 
               <Link
@@ -212,7 +219,7 @@ export default function HomePage() {
       )}
 
       {/* Authenticated CTA Section */}
-      {isAuthenticated && !usuario?.esOrganizador() && (
+          {isAuthenticated && role == "Organizador " && (
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-bg-secondary">
           <div className="max-w-3xl mx-auto text-center bg-white p-8 rounded-lg border border-primary">
             <h2 className="text-2xl font-bold text-text-primary mb-4">¿Quieres organizar eventos?</h2>

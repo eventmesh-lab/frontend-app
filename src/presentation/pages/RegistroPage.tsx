@@ -4,13 +4,18 @@ import type React from "react"
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
-import { ArrowRight, Mail, Lock, User } from "lucide-react"
+import { ArrowRight, Mail, Lock, User, Calendar } from "lucide-react"
 
 export default function RegistroPage() {
   const [nombre, setNombre] = useState("")
+  const [apellido, setApellido] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [passwordConfirm, setPasswordConfirm] = useState("")
+  const [telefono, setTelefono] = useState("")
+  const [direccion, setDireccion] = useState("")
+  const [fechaNacimiento, setFechaNacimiento] = useState("")
+  const [rol, setRol] = useState("Usuario")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [acceptTerms, setAcceptTerms] = useState(false)
@@ -26,6 +31,14 @@ export default function RegistroPage() {
     if (nombre.trim().length < 2) {
       setError("El nombre debe tener al menos 2 caracteres")
       return false
+      }
+    if (!apellido.trim()) {
+        setError("El apellido es requerido")
+      return false
+    }
+    if (apellido.trim().length < 2) {
+      setError("El apellido debe tener al menos 2 caracteres")
+      return false
     }
     if (!email.trim()) {
       setError("El email es requerido")
@@ -34,7 +47,45 @@ export default function RegistroPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Por favor ingresa un email válido")
       return false
+      }
+    if (!telefono.trim()) {
+          setError("El telefono es requerido")
+          return false
     }
+    if (!/^\d{11}$/.test(telefono)) {
+          setError("El numero de telefono debe tener 11 digitos")
+          return false
+    }
+    if (!direccion.trim()) {
+          setError("La direccion es requerida")
+          return false
+      }
+    if (!fechaNacimiento.trim()) {
+        setError("La fecha de nacimiento es requerida")
+          return false
+      }
+
+
+      const fecha = new Date(fechaNacimiento);
+      const hoy = new Date();
+
+      const edad = hoy.getFullYear() - fecha.getFullYear();
+      const mes = hoy.getMonth() - fecha.getMonth();
+      const dia = hoy.getDate() - fecha.getDate();
+
+      const esMenorDe18 =
+          edad < 18 ||
+          (edad === 18 && mes < 0) ||
+          (edad === 18 && mes === 0 && dia < 0);
+
+      if (esMenorDe18) {
+          setError("Debes tener al menos 18 años");
+          console.log("Fecha de nacimiento inválida para ser mayor de 18 años:", fechaNacimiento);
+          return false
+      }
+
+
+
     if (!password) {
       setError("La contraseña es requerida")
       return false
@@ -54,25 +105,59 @@ export default function RegistroPage() {
     return true
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError(null)
 
-    if (!validateForm()) {
-      return
+
+        console.log("Formulario enviado con los siguientes datos:")
+        console.log("Nombre:", nombre)
+        console.log("Email:", email)
+        console.log("Apellido:", apellido)
+        console.log("Teléfono:", telefono)
+        console.log("Dirección:", direccion)
+        console.log("Fecha de Nacimiento:", fechaNacimiento)
+        console.log("Rol:", rol)
+        console.log("Aceptó términos:", acceptTerms)
+
+        if (!validateForm()) return
+
+        setIsLoading(true)
+
+        try {
+            const response = await fetch("http://localhost:7247/users/registerUser", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    firstName: nombre,
+                    lastName: apellido,
+                    email: email,
+                    phoneNumber: telefono,
+                    address: direccion,
+                    birthdate: fechaNacimiento,
+                    roleUser: rol,
+                    password: password,
+                })
+            })
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.message || "Error en el registro")
+            }
+
+            // Si el backend devuelve el token o datos del usuario, puedes iniciar sesión
+            await login(email, password)
+            navigate("/", { replace: true })
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error en el registro")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
-    setIsLoading(true)
 
-    try {
-      await login(email, password)
-      navigate("/", { replace: true })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error en el registro")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+
 
   const handleOAuth = () => {
     initiateOAuth()
@@ -95,20 +180,13 @@ export default function RegistroPage() {
           <p className="mt-2 text-center text-text-secondary">Únete a EventHub en menos de un minuto</p>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="rounded-md bg-red-50 p-4 border border-red-200">
-            <p className="text-sm font-medium text-red-800">{error}</p>
-          </div>
-        )}
-
         {/* Registration Form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             {/* Nombre */}
             <div>
               <label htmlFor="nombre" className="block text-sm font-medium text-text-primary mb-2">
-                Nombre Completo
+                Nombre 
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
@@ -121,10 +199,93 @@ export default function RegistroPage() {
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                  placeholder="Juan Pérez"
+                  placeholder="Juan"
                 />
               </div>
             </div>
+
+            {/* Apellido */}
+            <div>
+              <label htmlFor="apellido" className="block text-sm font-medium text-text-primary mb-2">
+                Apellido
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
+                <input
+                 id="apellido"
+                 name="apellido"
+                 type="text"
+                 autoComplete="apellido"
+                 required
+                 value={apellido}
+                 onChange={(e) => setApellido(e.target.value)}
+                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
+                 placeholder="Pérez"
+                 />
+              </div>
+            </div>
+
+            {/* Telefono */}
+            <div>
+              <label htmlFor="apellido" className="block text-sm font-medium text-text-primary mb-2">
+                Teléfono
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
+                <input
+                 id="telefono"
+                 name="telefono"
+                 type="text"
+                 autoComplete="telefono"
+                 required
+                 value={telefono}
+                 onChange={(e) => setTelefono(e.target.value)}
+                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
+                 placeholder="04121234567"
+                 />
+              </div>
+            </div>
+
+            {/* Direccion */}
+            <div>
+              <label htmlFor="direccion" className="block text-sm font-medium text-text-primary mb-2">
+                Dirección
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
+                <input
+                 id="direccion"
+                 name="direccion"
+                 type="text"
+                 autoComplete="direccion"
+                 required
+                 value={direccion}
+                 onChange={(e) => setDireccion(e.target.value)}
+                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
+                 placeholder="Caracas"
+                 />
+              </div>
+            </div>
+
+            {/* Fecha de nacimiento */}
+             <div>
+               <label htmlFor="fechaHora" className="block text-sm font-medium text-text-primary mb-2">
+                Fecha de nacimiento
+               </label>
+               <div className="relative">
+                 <Calendar className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
+                 <input
+                  id="fechaHora"
+                  name="fechaHora"
+                  type="datetime-local"
+                  required
+                  value={fechaNacimiento}
+                  onChange={(e) => setFechaNacimiento(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
+                  />
+               </div>
+            </div>
+
 
             {/* Email */}
             <div>
@@ -212,12 +373,13 @@ export default function RegistroPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 transition-colors"
-          >
-            {isLoading ? "Creando cuenta..." : "Crear Cuenta"}
-            {!isLoading && <ArrowRight className="w-4 h-4" />}
-          </button>
+            className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-border rounded-lg shadow-sm bg-white text-sm font-medium text-text-primary hover:bg-bg-secondary transition-colors"
 
+             >
+            {isLoading ? "Registrando..." : "Registrarse"}
+            {!isLoading && <ArrowRight className="h-4 w-4" />}
+           </button>
+                  
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -227,19 +389,14 @@ export default function RegistroPage() {
               <span className="px-2 bg-white text-text-tertiary">O continúa con</span>
             </div>
           </div>
-
-          {/* OAuth Button */}
-          <button
-            type="button"
-            onClick={handleOAuth}
-            className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-border rounded-lg shadow-sm bg-white text-sm font-medium text-text-primary hover:bg-bg-secondary transition-colors"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M15.545 6.558a9.42 9.42 0 01.139 1.626c0 2.449-.356 4.68-1.015 6.467h.049c.02.323.021.645.021.967v.75c0 .73-.074 1.446-.221 2.141H6.92c.166-.678.316-1.268.455-1.77.13-.461.243-.925.243-1.435V8.587c0-.312-.03-.623-.08-.92h8.006z" />
-            </svg>
-            <span>Keycloak OAuth</span>
-          </button>
         </form>
+
+        {/* Error Alert */}
+          {error && (
+          <div className="rounded-md bg-red-50 p-4 border border-red-200">
+            <p className="text-sm font-medium text-red-800">{error}</p>
+          </div>
+        )}
 
         {/* Login Link */}
         <div className="text-center">

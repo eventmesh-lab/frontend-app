@@ -1,13 +1,13 @@
 "use client"
 
-import { useAuth } from "../../contexts/AuthContext"
+import  useAuth  from "../../contexts/Auth"
 import { Link, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import NotificationCenter from "./NotificationCenter"
 import { Menu, X, ChevronDown } from "lucide-react"
 
 export default function Navbar() {
-  const { usuario, logout, isAuthenticated } = useAuth()
+    const { isAuthenticated, username, role, name, logout } = useAuth()
   const navigate = useNavigate()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
@@ -46,12 +46,12 @@ export default function Navbar() {
                 <Link to="/mis-reservas" className="text-text-secondary hover:text-primary transition-colors font-medium">
                   Mis Reservas
                 </Link>
-                {usuario?.esOrganizador() && (
+                {isAuthenticated && role == "Organizador" && (
                   <Link to="/organizador" className="text-text-secondary hover:text-primary transition-colors font-medium">
                     Dashboard
                   </Link>
                 )}
-                {usuario?.esAdmin() && (
+                {isAuthenticated && role == "admin"&& (
                   <Link to="/admin" className="text-text-secondary hover:text-primary transition-colors font-medium">
                     Admin
                   </Link>
@@ -71,17 +71,17 @@ export default function Navbar() {
                   className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-bg-secondary transition-colors"
                 >
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-bold">
-                    {usuario?.nombre.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-sm text-text-secondary hidden sm:inline">{usuario?.nombre}</span>
+                    {name?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="text-sm text-text-secondary hidden sm:inline">{name}</span>
                   <ChevronDown className="w-4 h-4 text-text-secondary" />
                 </button>
 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-border-light py-1 z-50">
                     <div className="px-4 py-2 border-b border-border-light">
-                      <p className="text-sm font-semibold text-text-primary">{usuario?.email}</p>
-                      <p className="text-xs text-text-secondary mt-1">{usuario?.role}</p>
+                      <p className="text-sm font-semibold text-text-primary">{username}</p>
+                      <p className="text-xs text-text-secondary mt-1">{role}</p>
                     </div>
                     <Link
                       to="/perfil"
@@ -150,7 +150,7 @@ export default function Navbar() {
                 >
                   Mis Reservas
                 </Link>
-                {usuario?.esOrganizador() && (
+                {isAuthenticated && role == "Organizador"&& (
                   <Link
                     to="/organizador"
                     className="block px-4 py-2 text-text-secondary hover:text-primary hover:bg-bg-secondary rounded-md transition-colors"
@@ -159,7 +159,7 @@ export default function Navbar() {
                     Dashboard
                   </Link>
                 )}
-                {usuario?.esAdmin() && (
+                {isAuthenticated && role == "admin" && (
                   <Link
                     to="/admin"
                     className="block px-4 py-2 text-text-secondary hover:text-primary hover:bg-bg-secondary rounded-md transition-colors"
