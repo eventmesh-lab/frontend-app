@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import axios from 'axios';
 //import { useAuth } from "../contexts/AuthContext"
 import useAuth from "../contexts/Auth"
@@ -61,8 +61,22 @@ export default function LoginPage() {
            
             login(response.data.access_token, response.data.refresh_token);
             navigate('/');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Error en login")
+        } catch (err: any) {
+            let errorMessage = "Error en login";
+
+            if (axios.isAxiosError(err)) {
+                if (err.response?.data?.error_description) {
+                    errorMessage = err.response.data.error_description;
+                } else if (err.response?.data?.error) {
+                    errorMessage = err.response.data.error;
+                } else if (err.message) {
+                    errorMessage = err.message;
+                }
+            }
+            if (err.response?.data?.error_description === "Invalid user credentials") {
+                errorMessage = "Usuario o contraseña incorrectos";
+            }
+            setError(errorMessage);
         } finally {
             setIsLoading(false)
         }
@@ -144,6 +158,14 @@ export default function LoginPage() {
                         >
                             {isLoading ? "Autenticando..." : "Iniciar sesión"}
                         </button>
+                    </div>
+                    <div className="pt-6">
+                        <Link
+                            to="/changePassword"
+                            className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-border rounded-lg shadow-sm bg-white text-sm font-medium text-text-primary hover:bg-bg-secondary transition-colors"
+                        >
+                            Cambiar contraseña
+                        </Link>
                     </div>
 
                     <div className="relative">

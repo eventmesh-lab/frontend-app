@@ -18,7 +18,8 @@ export default function RegistroPage() {
   const [rol, setRol] = useState("Usuario")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [acceptTerms, setAcceptTerms] = useState(false)
+ const [acceptTerms, setAcceptTerms] = useState(false)
+ const [showSuccess, setShowSuccess] = useState(false)
 
   const { login, initiateOAuth } = useAuth()
   const navigate = useNavigate()
@@ -142,14 +143,28 @@ export default function RegistroPage() {
                 })
             })
             if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.message || "Error en el registro")
+                // Intenta parsear el cuerpo como JSON
+                let errorMessage = "Error en el registro";
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || JSON.stringify(errorData);
+                } catch (jsonError) {
+                    // Si no es JSON válido, intenta leer como texto
+                    const errorText = await response.text();
+                    errorMessage = errorText || errorMessage;
+                }
+
+                console.error("Error de registro:", errorMessage);
+                setError(errorMessage);
+                return; // Evita continuar con el flujo si hubo error
             }
 
+
             // Si el backend devuelve el token o datos del usuario, puedes iniciar sesión
-            await login(email, password)
-            navigate("/", { replace: true })
+         //   await login(email, password)
+            setShowSuccess(true);
         } catch (err) {
+            console.error("Error en la solicitud de registro:", err)
             setError(err instanceof Error ? err.message : "Error en el registro")
         } finally {
             setIsLoading(false)
@@ -367,7 +382,13 @@ export default function RegistroPage() {
                 términos y condiciones
               </a>
             </label>
+           </div>
+          {/* Error Alert */}
+          {error && (
+          <div className="rounded-md bg-red-50 p-4 border border-red-200">
+            <p className="text-sm font-medium text-red-800">{error}</p>
           </div>
+        )}
 
           {/* Submit Button */}
           <button
@@ -391,12 +412,22 @@ export default function RegistroPage() {
           </div>
         </form>
 
-        {/* Error Alert */}
-          {error && (
-          <div className="rounded-md bg-red-50 p-4 border border-red-200">
-            <p className="text-sm font-medium text-red-800">{error}</p>
-          </div>
-        )}
+        {showSuccess && (
+                    <div className="fixed bottom-4 right-4 bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg shadow-md z-50">
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="text-sm">¡Registro exitoso!</span>
+                            <button
+                                onClick={() => {
+                                    setShowSuccess(false);
+                                    navigate("/"); // o "/login"
+                                }}
+                                className="text-sm font-medium text-green-700 hover:underline"
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                )}
 
         {/* Login Link */}
         <div className="text-center">
