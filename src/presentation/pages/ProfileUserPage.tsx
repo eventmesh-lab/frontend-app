@@ -39,7 +39,7 @@ export default function PerfilUsuarioPage() {
             .catch((error) => {
                 console.error('Error al obtener datos del usuario:', error);
             });
-            fetch(`http://localhost:7247/users/getHistory/${username}`, {
+           /* fetch(`http://localhost:7247/users/getHistory/${username}`, {
                 method: 'GET',
             })
                 .then((res) => res.json())
@@ -48,7 +48,7 @@ export default function PerfilUsuarioPage() {
                 })
                 .catch((error) => {
                     console.error('Error al obtener el historial:', error);
-                });
+                });*/
         }
 
     }, [username, role, isAuthenticated]);
@@ -124,7 +124,7 @@ export default function PerfilUsuarioPage() {
                 <div className="pt-6">
                     <Link
                         to="/actualizarPerfil"
-                        className="px-6 py-3 border-2 border-primary text-primary rounded-lg font-semibold hover:bg-primary hover:text-white transition-colors inline-flex items-center gap-2"
+                        className="px-6 py-3 border-2 border-primary rounded-lg shadow-sm bg-white text-sm font-semibold text-primary inline-flex items-center gap-2 hover:bg-bg-secondary transition-colors"
                     >
                         Editar Perfil
                     </Link>

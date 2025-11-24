@@ -15,17 +15,19 @@ export default function UpdateUserPage() {
     const [error, setError] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
 
+    const [showSuccess, setShowSuccess] = useState(false)
+
     const validateForm = (): boolean => {
         
         console.log("Validando formulario con datos:")
         console.log("Nombre:", nombre)
         console.log("Apellido:", apellido)
-        console.log("Teléfono:", telefono)
-        console.log("Dirección:", direccion)
+        console.log("TelÃ©fono:", telefono)
+        console.log("DirecciÃ³n:", direccion)
 		console.log("Fecha de Nacimiento:", fechaNacimiento)
 
         if ( telefono!="" && !/^\d{11}$/.test(telefono)) {
-            setError("El número de teléfono debe tener 11 dígitos")
+            setError("El nÃºmero de telÃ©fono debe tener 11 dÃ­gitos")
             return false
         }
             const fecha = new Date(fechaNacimiento);
@@ -41,8 +43,8 @@ export default function UpdateUserPage() {
                 (edad === 18 && mes === 0 && dia < 0);
 
             if (esMenorDe18 && fechaNacimiento != "") {
-                setError("Debes tener al menos 18 años");
-                console.log("Fecha de nacimiento inválida para ser mayor de 18 años:", fechaNacimiento);
+                setError("Debes tener al menos 18 aÃ±os");
+                console.log("Fecha de nacimiento invÃ¡lida para ser mayor de 18 aÃ±os:", fechaNacimiento);
                 return false
             }
         
@@ -74,8 +76,7 @@ export default function UpdateUserPage() {
                 const errorData = await response.json()
                 throw new Error(errorData.message || "Error al actualizar el usuario")
             }
-
-            navigate("/perfil", { replace: true })
+            setShowSuccess(true);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al actualizar")
         } finally {
@@ -123,9 +124,9 @@ export default function UpdateUserPage() {
                             </div>
                         </div>
 
-                        {/* Teléfono */}
+                        {/* TelÃ©fono */}
                         <div>
-                            <label className="block text-sm font-medium text-text-primary mb-2">Telefono</label>
+                            <label className="block text-sm font-medium text-text-primary mb-2">TelÃ©fono</label>
                             <div className="relative">
                                 <Phone className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
                                 <input
@@ -138,9 +139,9 @@ export default function UpdateUserPage() {
                             </div>
                         </div>
 
-                        {/* Dirección */}
+                        {/* DirecciÃ³n */}
                         <div>
-                            <label className="block text-sm font-medium text-text-primary mb-2">Direccion</label>
+                            <label className="block text-sm font-medium text-text-primary mb-2">DirecciÃ³n</label>
                             <div className="relative">
                                 <MapPin className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
                                 <input
@@ -187,6 +188,22 @@ export default function UpdateUserPage() {
                         </div>
                     </div>
                 </form>
+                {showSuccess && (
+                    <div className="fixed bottom-4 right-4 bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg shadow-md z-50">
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="text-sm">Â¡ModificaciÃ³n exitosa!</span>
+                            <button
+                                onClick={() => {
+                                    setShowSuccess(false);
+                                    navigate("/perfil"); // o "/login"
+                                }}
+                                className="text-sm font-medium text-green-700 hover:underline"
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

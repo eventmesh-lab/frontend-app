@@ -13,6 +13,10 @@ import MisReservasPage from "./presentation/pages/MisReservasPage"
 import OrganizadorDashboardPage from "./presentation/pages/OrganizadorDashboardPage"
 import AdminDashboardPage from "./presentation/pages/AdminDashboardPage"
 import ProfileUserPage from "./presentation/pages/ProfileUserPage"
+import ChangePasswordPage from "./presentation/pages/ChangePasswordPage"
+import UserDetailPage from "./presentation/pages/UserDetailPage"
+import UserByAdminPage from "./presentation/pages/UserByAdminPage"
+import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
 import { RoleType } from "./domain/entities/Usuario"
 import React from "react"
 import ReactDOM from "react-dom/client"
@@ -108,6 +112,36 @@ function App() {
                                         <UpdateUserPage />
                                     </MainLayout>
                                 </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/changePassword" 
+                            element={
+                                    <ChangePasswordPage />
+                            }
+                        />
+                        <Route
+                            path="/admin/usuarios"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <UserByAdminPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/user/:email"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                     <UserDetailPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route path="/admin/registerOrganizer"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <RegisterUserOrganizerPage />
+                                </PrivateRoute>
+
                             }
                         />
 
