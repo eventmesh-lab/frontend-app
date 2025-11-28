@@ -9,7 +9,7 @@ interface UseReservasReturn {
   isLoading: boolean
   error: string | null
   crearReserva: (data: CrearReservaDTO) => Promise<ReservaEntity>
-  obtenerMisReservas: (asistenteId: string) => Promise<void>
+  obtenerMisReservas: () => Promise<void>
   cancelarReserva: (reservaId: string) => Promise<void>
   limpiar: () => void
 }
@@ -34,11 +34,11 @@ export function useReservas(): UseReservasReturn {
     }
   }, [])
 
-  const obtenerMisReservas = useCallback(async (asistenteId: string) => {
+  const obtenerMisReservas = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const resultado = await obtenerMisReservasUseCase.ejecutar(asistenteId)
+      const resultado = await obtenerMisReservasUseCase.ejecutar()
       setReservas(resultado)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error obteniendo reservas")

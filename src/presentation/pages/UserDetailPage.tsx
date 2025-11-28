@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom"
 import { Mail, Phone, User, Calendar, Home, ArrowLeft } from "lucide-react"
+import { httpClient } from "../../adapters/api/httpClient"
 
 type UserProfile = {
     firstName: string
@@ -24,22 +25,23 @@ export default function UserDetailPage() {
         const fetchUser = async () => {
             setIsLoading(true)
             try {
-                const response = await fetch("http://localhost:7247/users/getUsers")
-                if (!response.ok) throw new Error("Error al obtener usuarios")
-
-                const data: UserProfile[] = await response.json()
+                const client = httpClient.getUsersClient()
+                const response = await client.get("/api/users/getUsers")
+                const data: UserProfile[] = response.data
                 const foundUser = data.find(u => u.email === email)
 
                 if (!foundUser) throw new Error("Usuario no encontrado")
                 setUser(foundUser)
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Error desconocido")
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || "Error desconocido")
             } finally {
                 setIsLoading(false)
             }
         }
 
-        fetchUser()
+        if (email) {
+            fetchUser()
+        }
     }, [email])
 
     return (

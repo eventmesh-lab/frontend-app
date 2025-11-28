@@ -13,7 +13,7 @@ export default function MisReservasPage() {
 
   useEffect(() => {
     if (usuario) {
-      obtenerMisReservas(usuario.id)
+      obtenerMisReservas()
     }
   }, [usuario, obtenerMisReservas])
 

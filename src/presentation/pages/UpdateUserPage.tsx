@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Calendar, User, Phone, MapPin } from "lucide-react"
 import useAuth from "../contexts/Auth"
+import { httpClient } from "../../adapters/api/httpClient"
 
 export default function UpdateUserPage() {
     const { isAuthenticated, username } = useAuth()
@@ -60,22 +61,14 @@ export default function UpdateUserPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch(`http://localhost:7247/users/updateUser/${username}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    firstName: nombre,
-                    lastName: apellido,
-                    phoneNumber: telefono,
-                    address: direccion,
-                    birthdate: fechaNacimiento === "" ? null : fechaNacimiento,
-                }),
+            const client = httpClient.getUsersClient()
+            await client.put(`/api/users/updateUser/${username}`, {
+                firstName: nombre,
+                lastName: apellido,
+                phoneNumber: telefono,
+                address: direccion,
+                birthdate: fechaNacimiento === "" ? null : fechaNacimiento,
             })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.message || "Error al actualizar el usuario")
-            }
             setShowSuccess(true);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al actualizar")

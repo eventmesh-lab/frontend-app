@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { User } from "lucide-react"
+import { httpClient } from "../../adapters/api/httpClient"
 
 type UserProfile = {
     firstName: string
@@ -23,15 +24,11 @@ export default function ProfileUserByAdminPage() {
         const fetchUsers = async () => {
             setIsLoading(true)
             try {
-                const response = await fetch("http://localhost:7247/users/getUsers")
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    throw new Error(errorText || "Error al obtener usuarios")
-                }
-                const data = await response.json()
-                setUsers(data)
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Error desconocido")
+                const client = httpClient.getUsersClient()
+                const response = await client.get("/api/users/getUsers")
+                setUsers(response.data)
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || "Error al obtener usuarios")
             } finally {
                 setIsLoading(false)
             }

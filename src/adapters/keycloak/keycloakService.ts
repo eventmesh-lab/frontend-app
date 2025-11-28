@@ -1,6 +1,5 @@
-import { type KeycloakToken, type KeycloakUser, keycloakConfig } from "./keycloakConfig"
-import { RoleType } from "../../domain/entities/Usuario"
-import { usuariosApi } from "../api/usuariosApi"
+import axios from 'axios'
+import { type KeycloakToken, type KeycloakUser } from "./keycloakConfig"
 
 class KeycloakService {
   private tokenKey = "keycloak_token"
@@ -17,10 +16,11 @@ class KeycloakService {
     localStorage.setItem("oauth_state", state)
     localStorage.setItem("oauth_nonce", nonce)
 
-    const authorizationUrl = new URL(`/realms/${keycloakConfig.realm}/protocol/openid-connect/auth`, keycloakConfig.url)
+    const config = getKeycloakConfig()
+    const authorizationUrl = new URL(`/realms/${config.realm}/protocol/openid-connect/auth`, config.url)
 
-    authorizationUrl.searchParams.append("client_id", keycloakConfig.clientId)
-    authorizationUrl.searchParams.append("redirect_uri", keycloakConfig.redirectUri)
+    authorizationUrl.searchParams.append("client_id", config.clientId)
+    authorizationUrl.searchParams.append("redirect_uri", config.redirectUri)
     authorizationUrl.searchParams.append("response_type", "code")
     authorizationUrl.searchParams.append("scope", "openid profile email")
     authorizationUrl.searchParams.append("state", state)
@@ -30,7 +30,7 @@ class KeycloakService {
   }
 
   /**
-   * Procesa el callback de OAuth (mock en desarrollo)
+   * Procesa el callback de OAuth
    */
   async handleOAuthCallback(code: string): Promise<KeycloakToken | null> {
     try {
@@ -39,13 +39,37 @@ class KeycloakService {
         throw new Error("Estado OAuth no válido")
       }
 
-      // En producción, esto haría una llamada al endpoint de token de Keycloak
-      // Para desarrollo, generamos un token mock
-      const token = this.generateMockToken(code)
+      const config = getKeycloakConfig()
+      const tokenUrl = `${config.url}/realms/${config.realm}/protocol/openid-connect/token`
+
+      const response = await axios.post(
+        tokenUrl,
+        new URLSearchParams({
+          grant_type: "authorization_code",
+          code: code,
+          client_id: config.clientId,
+          redirect_uri: config.redirectUri,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      )
+
+      const token: KeycloakToken = {
+        accessToken: response.data.access_token,
+        refreshToken: response.data.refresh_token,
+        idToken: response.data.id_token,
+        expiresIn: response.data.expires_in,
+        tokenType: response.data.token_type || "Bearer",
+      }
+
       this.storeToken(token)
+      await this.loadUserInfo(token.accessToken)
 
       return token
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error en OAuth callback:", error)
       return null
     } finally {
@@ -59,29 +83,105 @@ class KeycloakService {
    */
   async loginWithCredentials(email: string, password: string): Promise<KeycloakToken | null> {
     try {
-      // En producción, esto sería una llamada a Keycloak
-      // Para desarrollo, simulamos autenticación exitosa
-      if (password.length < 3) {
-        throw new Error("Contraseña inválida")
+      const config = getKeycloakConfig()
+      const tokenUrl = `${config.url}/realms/${config.realm}/protocol/openid-connect/token`
+
+      const response = await axios.post(
+        tokenUrl,
+        new URLSearchParams({
+          grant_type: "password",
+          username: email,
+          password: password,
+          client_id: config.clientId,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      )
+
+      const token: KeycloakToken = {
+        accessToken: response.data.access_token,
+        refreshToken: response.data.refresh_token,
+        idToken: response.data.id_token,
+        expiresIn: response.data.expires_in,
+        tokenType: response.data.token_type || "Bearer",
       }
 
-      const user = await usuariosApi.obtenerPorEmail(email)
-      if (!user) {
-        throw new Error("Usuario no encontrado")
-      }
-
-      // Generar token mock
-      const token = this.generateMockToken(email)
       this.storeToken(token)
-
-      // Decodificar y almacenar información del usuario
-      const userInfo = this.decodeMockUser(email, user.role)
-      this.storeUser(userInfo)
+      await this.loadUserInfo(token.accessToken)
 
       return token
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error en login:", error)
-      throw error
+      if (error.response?.status === 401) {
+        throw new Error("Credenciales inválidas")
+      }
+      throw new Error(error.response?.data?.error_description || "Error al iniciar sesión")
+    }
+  }
+
+  /**
+   * Carga la información del usuario desde Keycloak
+   */
+  private async loadUserInfo(accessToken: string): Promise<void> {
+    try {
+      const config = getKeycloakConfig()
+      const userInfoUrl = `${config.url}/realms/${config.realm}/protocol/openid-connect/userinfo`
+
+      const response = await axios.get(userInfoUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      const userInfo: KeycloakUser = {
+        sub: response.data.sub,
+        name: response.data.name || response.data.preferred_username || "",
+        email: response.data.email || "",
+        given_name: response.data.given_name || "",
+        family_name: response.data.family_name || "",
+        roles: response.data.realm_access?.roles || [],
+      }
+
+      this.storeUser(userInfo)
+    } catch (error) {
+      console.error("Error cargando información del usuario:", error)
+      // Si falla, intentar obtener del token decodificado
+      try {
+        const decoded = this.decodeToken(accessToken)
+        const userInfo: KeycloakUser = {
+          sub: decoded.sub || "",
+          name: decoded.name || decoded.preferred_username || "",
+          email: decoded.email || "",
+          given_name: decoded.given_name || "",
+          family_name: decoded.family_name || "",
+          roles: decoded.realm_access?.roles || [],
+        }
+        this.storeUser(userInfo)
+      } catch (e) {
+        console.error("Error decodificando token:", e)
+      }
+    }
+  }
+
+  /**
+   * Decodifica un JWT token (sin verificar firma)
+   */
+  private decodeToken(token: string): any {
+    try {
+      const base64Url = token.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      )
+      return JSON.parse(jsonPayload)
+    } catch (error) {
+      throw new Error("Token inválido")
     }
   }
 
@@ -94,12 +194,13 @@ class KeycloakService {
     localStorage.removeItem(this.userKey)
     localStorage.removeItem(this.refreshTokenKey)
 
-    // En producción, llamar a endpoint de logout de Keycloak
-    const logoutUrl = new URL(`/realms/${keycloakConfig.realm}/protocol/openid-connect/logout`, keycloakConfig.url)
-    logoutUrl.searchParams.append("redirect_uri", keycloakConfig.logoutRedirectUri)
+    // Llamar a endpoint de logout de Keycloak
+    const config = getKeycloakConfig()
+    const logoutUrl = new URL(`/realms/${config.realm}/protocol/openid-connect/logout`, config.url)
+    logoutUrl.searchParams.append("redirect_uri", config.logoutRedirectUri)
 
-    // Descomenta para redireccionar a Keycloak en producción
-    // window.location.href = logoutUrl.toString()
+    // Redireccionar a Keycloak para logout completo
+    window.location.href = logoutUrl.toString()
   }
 
   /**
@@ -131,9 +232,14 @@ class KeycloakService {
     const token = this.getToken()
     if (!token) return false
 
-    // Aquí se verificaría la expiración del token
-    // Para desarrollo, asumimos que siempre es válido
-    return true
+    try {
+      const decoded = this.decodeToken(token)
+      const exp = decoded.exp * 1000 // Convertir a milisegundos
+      const now = Date.now()
+      return exp > now
+    } catch (error) {
+      return false
+    }
   }
 
   /**
@@ -146,12 +252,37 @@ class KeycloakService {
     }
 
     try {
-      // En producción, llamar a endpoint de refresh de Keycloak
-      const newToken = this.generateMockToken(refreshToken)
+      const config = getKeycloakConfig()
+      const tokenUrl = `${config.url}/realms/${config.realm}/protocol/openid-connect/token`
+
+      const response = await axios.post(
+        tokenUrl,
+        new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+          client_id: config.clientId,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      )
+
+      const newToken: KeycloakToken = {
+        accessToken: response.data.access_token,
+        refreshToken: response.data.refresh_token || refreshToken,
+        idToken: response.data.id_token,
+        expiresIn: response.data.expires_in,
+        tokenType: response.data.token_type || "Bearer",
+      }
+
       this.storeToken(newToken)
       return newToken
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error refrescando token:", error)
+      // Si el refresh falla, limpiar tokens y redirigir a login
+      this.logout()
       return null
     }
   }
@@ -186,32 +317,23 @@ class KeycloakService {
   private generateRandomState(): string {
     return Math.random().toString(36).substring(2, 15)
   }
+}
 
-  private generateMockToken(seed: string): KeycloakToken {
-    return {
-      accessToken: `mock_access_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      refreshToken: `mock_refresh_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      idToken: `mock_id_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      expiresIn: 3600,
-      tokenType: "Bearer",
+// Función helper para obtener configuración
+function getKeycloakConfig() {
+  const getOrigin = () => {
+    if (typeof window !== 'undefined' && window.location) {
+      return window.location.origin
     }
+    return 'http://localhost:3000'
   }
 
-  private decodeMockUser(email: string, role: RoleType): KeycloakUser {
-    const roleMap: Record<RoleType, string> = {
-      [RoleType.USUARIO]: "usuario",
-      [RoleType.ORGANIZADOR]: "organizador",
-      [RoleType.ADMIN]: "admin",
-    }
-
-    return {
-      sub: `user_${Date.now()}`,
-      name: email.split("@")[0],
-      email,
-      given_name: email.split("@")[0],
-      family_name: "Usuario",
-      roles: [roleMap[role]],
-    }
+  return {
+    realm: import.meta.env.VITE_KEYCLOAK_REALM || "myrealm",
+    url: import.meta.env.VITE_KEYCLOAK_URL || "http://localhost:8080",
+    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "eventhub-frontend",
+    redirectUri: import.meta.env.VITE_KEYCLOAK_REDIRECT_URI || getOrigin(),
+    logoutRedirectUri: import.meta.env.VITE_KEYCLOAK_LOGOUT_URI || getOrigin(),
   }
 }
 

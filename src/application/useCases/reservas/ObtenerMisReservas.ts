@@ -2,12 +2,9 @@ import { ReservaEntity } from "../../../domain/entities/Reserva"
 import { reservasApi } from "../../../adapters/api/reservasApi"
 
 export class ObtenerMisReservasUseCase {
-  async ejecutar(asistenteId: string): Promise<ReservaEntity[]> {
-    if (!asistenteId) {
-      throw new Error("ID de asistente requerido")
-    }
-
-    return reservasApi.obtenerMisReservas(asistenteId)
+  async ejecutar(): Promise<ReservaEntity[]> {
+    // La API obtiene el usuario del token de autenticación
+    return reservasApi.obtenerMisReservas()
   }
 }
 
