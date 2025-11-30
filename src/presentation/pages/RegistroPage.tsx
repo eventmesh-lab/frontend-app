@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { ArrowRight, Mail, Lock, User, Calendar } from "lucide-react"
-import { httpClient } from "../../adapters/api/httpClient"
+import { apiConfig } from "../../config/env"
 
 export default function RegistroPage() {
   const [nombre, setNombre] = useState("")
@@ -127,62 +127,30 @@ export default function RegistroPage() {
         setIsLoading(true)
 
         try {
-            const client = httpClient.getUsersClient()
-            const response = await client.post("/api/users/registerUser", {
-                firstName: nombre,
-                lastName: apellido,
-                email: email,
-                phoneNumber: telefono,
-                address: direccion,
-                birthdate: fechaNacimiento,
-                roleUser: rol,
-                password: password,
+            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.register}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    firstName: nombre,
+                    lastName: apellido,
+                    email: email,
+                    phoneNumber: telefono,
+                    address: direccion,
+                    birthdate: fechaNacimiento,
+                    roleUser: rol,
+                    password: password,
+                })
             })
 
-            console.log("Registro exitoso:", response.data)
-            setShowSuccess(true)
-            
-            // Opcional: redirigir al login después de un tiempo
-            setTimeout(() => {
-                navigate("/login")
-            }, 2000)
-        } catch (err: any) {
-            console.error("Error en la solicitud de registro:", err)
-            
-            // Manejar diferentes tipos de errores
-            let errorMessage = "Error en el registro"
-            
-            if (err.response) {
-                // Error de respuesta del servidor
-                const status = err.response.status
-                const errorData = err.response.data
-                
-                if (status === 404) {
-                    errorMessage = "El endpoint de registro no está disponible. Por favor, contacta al administrador."
-                } else if (status === 400) {
-                    errorMessage = errorData?.message || errorData?.error || "Datos inválidos. Por favor, verifica la información ingresada."
-                } else if (status === 409) {
-                    errorMessage = errorData?.message || "El email ya está registrado."
-                } else if (status === 500) {
-                    // Error del servidor - puede ser problema de base de datos
-                    const serverError = errorData?.message || ""
-                    if (serverError.includes("relation") && serverError.includes("does not exist")) {
-                        errorMessage = "Error del servidor: La base de datos no está configurada correctamente. Por favor, contacta al administrador."
-                    } else {
-                        errorMessage = `Error del servidor: ${serverError || "Error interno del servidor. Por favor, intenta más tarde o contacta al administrador."}`
-                    }
-                } else {
-                    errorMessage = errorData?.message || errorData?.error || JSON.stringify(errorData) || errorMessage
-                }
-            } else if (err.request) {
-                // Error de red (CORS, servidor no disponible, etc.)
-                errorMessage = "No se pudo conectar con el servidor. Verifica tu conexión o contacta al administrador."
-            } else {
-                // Otro tipo de error
-                errorMessage = err.message || errorMessage
-            }
-            
-            setError(errorMessage)
+
+            // Si el backend devuelve el token o datos del usuario, puedes iniciar sesión
+         //   await login(email, password)
+            setShowSuccess(true);
+        } catch (err) {
+            console.error("Error de red/conexión:", err);
+            setError("No se pudo conectar con el servidor. Verifica tu conexión.");
         } finally {
             setIsLoading(false)
         }

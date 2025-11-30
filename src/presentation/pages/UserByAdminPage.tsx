@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { User } from "lucide-react"
-import { httpClient } from "../../adapters/api/httpClient"
+import { apiConfig } from "../../config/env"
 
 type UserProfile = {
     firstName: string
@@ -24,11 +24,16 @@ export default function ProfileUserByAdminPage() {
         const fetchUsers = async () => {
             setIsLoading(true)
             try {
-                const client = httpClient.getUsersClient()
-                const response = await client.get("/api/users/getUsers")
-                setUsers(response.data)
-            } catch (err: any) {
-                setError(err.response?.data?.message || err.message || "Error al obtener usuarios")
+                const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.getAll}`)
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    throw new Error(errorText || "Error al obtener usuarios")
+                }
+                const data = await response.json()
+                setUsers(data)
+            } catch (err) {
+                console.error("Error de red/conexi�n:", err);
+                setError("No se pudo conectar con el servidor. Verifica tu conexi�n.");
             } finally {
                 setIsLoading(false)
             }

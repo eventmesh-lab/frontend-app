@@ -1,5 +1,29 @@
-import { type Evento, EstadoEvento, EventoEntity } from "../../domain/entities/Evento"
+import { type Evento, EstadoEvento, EventoEntity, type SeccionEvento } from "../../domain/entities/Evento"
 import { httpClient } from "./httpClient"
+
+/**
+ * DTO para crear un nuevo evento con secciones
+ */
+export interface CrearEventoApiDTO {
+  nombre: string
+  descripcion: string
+  fecha: string // ISO string
+  horasDuracion: number
+  minutosDuracion: number
+  organizadorId: string
+  venueId: string
+  categoria: string
+  tarifaPublicacion: number
+  secciones: SeccionEvento[]
+}
+
+/**
+ * DTO para pagar la publicación de un evento
+ */
+export interface PagarPublicacionDTO {
+  transaccionPagoId: string
+  monto: number
+}
 
 /**
  * Mapea un evento desde la API (con fechas como strings) a EventoEntity
@@ -11,14 +35,19 @@ function mapEventoFromApi(data: any): EventoEntity {
     descripcion: data.descripcion,
     categoria: data.categoria,
     fecha: new Date(data.fecha),
-    venue: data.venue,
+    horasDuracion: data.horasDuracion,
+    minutosDuracion: data.minutosDuracion,
+    venue: data.venue || data.venueId,
+    venueId: data.venueId,
     estado: data.estado as EstadoEvento,
     precio: data.precio,
     aforo: data.aforo,
     aforoDisponible: data.aforoDisponible ?? data.aforo,
     organizadorId: data.organizadorId,
+    tarifaPublicacion: data.tarifaPublicacion,
+    secciones: data.secciones,
     imagen: data.imagen,
-    fechaCreacion: new Date(data.fechaCreacion || data.fechaCreacion),
+    fechaCreacion: new Date(data.fechaCreacion || new Date()),
     fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
   })
 }
@@ -133,6 +162,62 @@ class EventosApiAdapter {
     } catch (error: any) {
       console.error("[v0] Error cancelando evento:", error)
       throw new Error(error.response?.data?.message || "Error al cancelar el evento")
+    }
+  }
+
+  /**
+   * Crea un nuevo evento con secciones usando la estructura completa de la API
+   */
+  async crearEventoConSecciones(data: CrearEventoApiDTO): Promise<EventoEntity> {
+    try {
+      const response = await this.client.post("/api/eventos", data)
+      console.log("[v0] Evento creado con secciones:", response.data.id)
+      return mapEventoFromApi(response.data)
+    } catch (error: any) {
+      console.error("[v0] Error creando evento con secciones:", error)
+      throw new Error(error.response?.data?.message || "Error al crear el evento")
+    }
+  }
+
+  /**
+   * Inicia el proceso de pago de publicación de un evento
+   * El evento debe estar en estado 'Borrador'
+   */
+  async pagarPublicacion(eventoId: string, data: PagarPublicacionDTO): Promise<void> {
+    try {
+      await this.client.post(`/api/eventos/${eventoId}/pagar-publicacion`, data)
+      console.log("[v0] Pago de publicación iniciado para evento:", eventoId)
+    } catch (error: any) {
+      console.error("[v0] Error pagando publicación:", error)
+      throw new Error(error.response?.data?.message || "Error al pagar la publicación del evento")
+    }
+  }
+
+  /**
+   * Marca un evento publicado como en curso
+   * El evento debe estar en estado 'Publicado'
+   */
+  async iniciarEvento(eventoId: string): Promise<void> {
+    try {
+      await this.client.post(`/api/eventos/${eventoId}/iniciar`)
+      console.log("[v0] Evento iniciado:", eventoId)
+    } catch (error: any) {
+      console.error("[v0] Error iniciando evento:", error)
+      throw new Error(error.response?.data?.message || "Error al iniciar el evento")
+    }
+  }
+
+  /**
+   * Finaliza un evento que está en curso
+   * El evento debe estar en estado 'EnCurso'
+   */
+  async finalizarEvento(eventoId: string): Promise<void> {
+    try {
+      await this.client.post(`/api/eventos/${eventoId}/finalizar`)
+      console.log("[v0] Evento finalizado:", eventoId)
+    } catch (error: any) {
+      console.error("[v0] Error finalizando evento:", error)
+      throw new Error(error.response?.data?.message || "Error al finalizar el evento")
     }
   }
 }

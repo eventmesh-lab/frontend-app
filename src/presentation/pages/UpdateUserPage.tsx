@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Calendar, User, Phone, MapPin } from "lucide-react"
 import useAuth from "../contexts/Auth"
-import { httpClient } from "../../adapters/api/httpClient"
+import { apiConfig } from "../../config/env"
 
 export default function UpdateUserPage() {
     const { isAuthenticated, username } = useAuth()
@@ -61,17 +61,21 @@ export default function UpdateUserPage() {
         setIsLoading(true)
 
         try {
-            const client = httpClient.getUsersClient()
-            await client.put(`/api/users/updateUser/${username}`, {
-                firstName: nombre,
-                lastName: apellido,
-                phoneNumber: telefono,
-                address: direccion,
-                birthdate: fechaNacimiento === "" ? null : fechaNacimiento,
+            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.update(username!)}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    firstName: nombre,
+                    lastName: apellido,
+                    phoneNumber: telefono,
+                    address: direccion,
+                    birthdate: fechaNacimiento === "" ? null : fechaNacimiento,
+                }),
             })
             setShowSuccess(true);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error al actualizar")
+            console.error("Error de red/conexión:", err);
+            setError("No se pudo conectar con el servidor. Verifica tu conexión.");
         } finally {
             setIsLoading(false)
         }

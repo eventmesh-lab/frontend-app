@@ -7,6 +7,7 @@ import React, {
 } from "react"
 import axios from "axios"
 import jwtDecode from 'jwt-decode'
+import { keycloakConfig } from "../../config/env"
 
 interface DecodedToken {
     preferred_username?: string
@@ -90,12 +91,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             try {
                 const res = await axios.post(
-                    "http://localhost:8180/realms/myrealm/protocol/openid-connect/token",
+                    keycloakConfig.tokenUrl,
                     new URLSearchParams({
                         grant_type: "refresh_token",
-                        client_id: "aspnetcore",
+                        client_id: keycloakConfig.clientId,
                         refresh_token: refreshToken,
-                        client_secret: 'PzaioIxlVKVINnJ7VJwCILdBoUlUWB05'
+                        client_secret: keycloakConfig.clientSecret
                     }),
                     {
                         headers: {
