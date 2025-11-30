@@ -8,10 +8,10 @@
  */
 
 /**
- * Configuración de la API Backend
+ * Configuración de la API de Usuarios
  */
 export const apiConfig = {
-  /** URL base del servicio */
+  /** URL base del servicio de usuarios */
   baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:7181',
   
   /** Endpoints específicos de usuarios */
@@ -21,6 +21,25 @@ export const apiConfig = {
     getOne: (username: string) => `/api/users/getUser/${username}`,
     update: (username: string) => `/api/users/updateUser/${username}`,
     changePassword: (email: string) => `/api/users/changePassword/${email}`,
+  }
+}
+
+/**
+ * Configuración de la API de Eventos
+ */
+export const eventsConfig = {
+  /** URL base del servicio de eventos */
+  baseUrl: import.meta.env.VITE_EVENTS_API_URL || 'http://localhost:5000',
+  
+  /** Endpoints específicos de eventos */
+  eventos: {
+    publicados: '/api/eventos/publicados',
+    detalle: (id: string) => `/api/eventos/${id}`,
+    crear: '/api/eventos',
+    publicar: (id: string) => `/api/eventos/${id}/publicar`,
+    editar: (id: string) => `/api/eventos/${id}`,
+    cancelar: (id: string) => `/api/eventos/${id}`,
+    porOrganizador: (organizadorId: string) => `/api/eventos/organizador/${organizadorId}`,
   }
 }
 
@@ -59,6 +78,7 @@ export const signalRConfig = {
  */
 export const config = {
   api: apiConfig,
+  events: eventsConfig,
   keycloak: keycloakConfig,
   signalR: signalRConfig,
 }
