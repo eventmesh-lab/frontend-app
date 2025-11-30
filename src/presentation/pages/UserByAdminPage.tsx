@@ -23,7 +23,7 @@ export default function ProfileUserByAdminPage() {
         const fetchUsers = async () => {
             setIsLoading(true)
             try {
-                const response = await fetch("http://localhost:7247/users/getUsers")
+                const response = await fetch("http://localhost:7181/api/users/getUsers")
                 if (!response.ok) {
                     const errorText = await response.text()
                     throw new Error(errorText || "Error al obtener usuarios")
@@ -31,7 +31,8 @@ export default function ProfileUserByAdminPage() {
                 const data = await response.json()
                 setUsers(data)
             } catch (err) {
-                setError(err instanceof Error ? err.message : "Error desconocido")
+                console.error("Error de red/conexión:", err);
+                setError("No se pudo conectar con el servidor. Verifica tu conexión.");
             } finally {
                 setIsLoading(false)
             }

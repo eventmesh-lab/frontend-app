@@ -24,7 +24,7 @@ export default function UserDetailPage() {
         const fetchUser = async () => {
             setIsLoading(true)
             try {
-                const response = await fetch("http://localhost:7247/users/getUsers")
+                const response = await fetch("http://localhost:7181/api/users/getUsers")
                 if (!response.ok) throw new Error("Error al obtener usuarios")
 
                 const data: UserProfile[] = await response.json()
@@ -33,7 +33,8 @@ export default function UserDetailPage() {
                 if (!foundUser) throw new Error("Usuario no encontrado")
                 setUser(foundUser)
             } catch (err) {
-                setError(err instanceof Error ? err.message : "Error desconocido")
+                console.error("Error de red/conexión:", err);
+                setError("No se pudo conectar con el servidor. Verifica tu conexión.");
             } finally {
                 setIsLoading(false)
             }

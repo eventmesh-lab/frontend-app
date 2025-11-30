@@ -22,36 +22,37 @@ export default function PerfilUsuarioPage() {
     const { isAuthenticated, username, role } = useAuth()
     const [userData, setUserData] = useState<Usuario | null>(null)
     const [userHistory, setUserHistory] = useState<Historial[]>([])
-
+    const [error, setError] = useState<string | null>(null)
 ;
 
     useEffect(() => {
         console.log("Perfil cargado:", { username, role, isAuthenticated })
 
         if (username) {
-            fetch(`http://localhost:7247/users/getUser/${username}`, {
-                method: 'GET',
-            })
-               .then((res) => res.json())
-               .then((data) => {
-                setUserData(data.usuario); 
-            })
-            .catch((error) => {
-                console.error('Error al obtener datos del usuario:', error);
-            });
-           /* fetch(`http://localhost:7247/users/getHistory/${username}`, {
+            fetch(`http://localhost:7181/api/users/getUser/${username}`, {
                 method: 'GET',
             })
                 .then((res) => res.json())
                 .then((data) => {
-                    setUserHistory(data);
+                    setUserData(data.usuario);
                 })
                 .catch((error) => {
-                    console.error('Error al obtener el historial:', error);
-                });*/
+                    console.error('Error al obtener datos del usuario:', error);
+                });
+            /* fetch(`http://localhost:7247/users/getHistory/${username}`, {
+                 method: 'GET',
+             })
+                 .then((res) => res.json())
+                 .then((data) => {
+                     setUserHistory(data);
+                 })
+                 .catch((error) => {
+                     console.error('Error al obtener el historial:', error);
+                 });*/
         }
 
     }, [username, role, isAuthenticated]);
+
 
     if (!isAuthenticated) {
         return (
@@ -72,10 +73,12 @@ export default function PerfilUsuarioPage() {
     }
 
     return (
+
         <div className="py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-12">
             <section className="bg-white shadow-lg rounded-xl p-8 space-y-6">
                 <h1 className="text-4xl font-bold text-text-primary">Tu Perfil</h1>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
                     <div className="flex items-center gap-4">
                         <User className="w-6 h-6 text-primary" />
                         <div>

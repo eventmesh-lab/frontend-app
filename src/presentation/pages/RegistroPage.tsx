@@ -126,7 +126,7 @@ export default function RegistroPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch("http://localhost:7247/users/registerUser", {
+            const response = await fetch("http://localhost:7181/api/users/registerUser", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -164,8 +164,8 @@ export default function RegistroPage() {
          //   await login(email, password)
             setShowSuccess(true);
         } catch (err) {
-            console.error("Error en la solicitud de registro:", err)
-            setError(err instanceof Error ? err.message : "Error en el registro")
+            console.error("Error de red/conexión:", err);
+            setError("No se pudo conectar con el servidor. Verifica tu conexión.");
         } finally {
             setIsLoading(false)
         }

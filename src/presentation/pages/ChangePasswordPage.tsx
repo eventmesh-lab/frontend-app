@@ -42,7 +42,7 @@ export default function ChangePasswordPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch(`http://localhost:7247/users/changePassword/${email}`, {
+            const response = await fetch(`http://localhost:7181/api/users/changePassword/${email}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

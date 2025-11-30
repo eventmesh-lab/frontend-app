@@ -60,7 +60,7 @@ export default function UpdateUserPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch(`http://localhost:7247/users/updateUser/${username}`, {
+            const response = await fetch(`http://localhost:7181/api/users/updateUser/${username}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -78,7 +78,8 @@ export default function UpdateUserPage() {
             }
             setShowSuccess(true);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Error al actualizar")
+            console.error("Error de red/conexión:", err);
+            setError("No se pudo conectar con el servidor. Verifica tu conexión.");
         } finally {
             setIsLoading(false)
         }

@@ -126,7 +126,7 @@ export default function RegistroPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch("http://localhost:7247/users/registerUser", {
+            const response = await fetch("http://localhost:7181/api/users/registerUser", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
