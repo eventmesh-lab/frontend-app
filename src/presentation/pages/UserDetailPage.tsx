@@ -41,7 +41,9 @@ export default function UserDetailPage() {
             }
         }
 
-        fetchUser()
+        if (email) {
+            fetchUser()
+        }
     }, [email])
 
     return (

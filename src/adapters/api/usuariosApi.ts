@@ -1,141 +1,154 @@
 import { type Usuario, RoleType, UsuarioEntity } from "../../domain/entities/Usuario"
+import { httpClient } from "./httpClient"
+
+/**
+ * Mapea un usuario desde la API a UsuarioEntity
+ */
+function mapUsuarioFromApi(data: any): UsuarioEntity {
+  return new UsuarioEntity({
+    id: data.id,
+    nombre: data.nombre,
+    email: data.email,
+    avatar: data.avatar,
+    role: data.role as RoleType,
+    activo: data.activo !== undefined ? data.activo : true,
+    fechaCreacion: new Date(data.fechaCreacion || new Date()),
+    fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
+  })
+}
+
+/**
+ * Mapea un usuario para enviarlo a la API
+ */
+function mapUsuarioToApi(usuario: Partial<Usuario>): any {
+  const mapped: any = { ...usuario }
+  if (usuario.fechaCreacion) {
+    mapped.fechaCreacion = usuario.fechaCreacion instanceof Date ? usuario.fechaCreacion.toISOString() : usuario.fechaCreacion
+  }
+  if (usuario.fechaActualizacion) {
+    mapped.fechaActualizacion = usuario.fechaActualizacion instanceof Date ? usuario.fechaActualizacion.toISOString() : usuario.fechaActualizacion
+  }
+  return mapped
+}
 
 class UsuariosApiAdapter {
-  private usuarios = new Map<string, UsuarioEntity>()
-
-  constructor() {
-    this.inicializarDatos()
-  }
-
-  private inicializarDatos(): void {
-    const usuariosInicial: Usuario[] = [
-      {
-        id: "usr_001",
-        nombre: "Juan Pérez",
-        email: "juan@example.com",
-        role: RoleType.USUARIO,
-        activo: true,
-        avatar: "/user-avatar.jpg",
-        fechaCreacion: new Date("2025-01-01"),
-        fechaActualizacion: new Date("2025-01-01"),
-      },
-      {
-        id: "org_001",
-        nombre: "Carlos García",
-        email: "carlos@example.com",
-        role: RoleType.ORGANIZADOR,
-        activo: true,
-        avatar: "/organizer-avatar.jpg",
-        fechaCreacion: new Date("2025-01-01"),
-        fechaActualizacion: new Date("2025-01-01"),
-      },
-      {
-        id: "org_002",
-        nombre: "María López",
-        email: "maria@example.com",
-        role: RoleType.ORGANIZADOR,
-        activo: true,
-        avatar: "/organizer-avatar-2.jpg",
-        fechaCreacion: new Date("2025-01-02"),
-        fechaActualizacion: new Date("2025-01-02"),
-      },
-      {
-        id: "org_003",
-        nombre: "Roberto Martínez",
-        email: "roberto@example.com",
-        role: RoleType.ORGANIZADOR,
-        activo: true,
-        avatar: "/organizer-avatar-3.jpg",
-        fechaCreacion: new Date("2025-01-03"),
-        fechaActualizacion: new Date("2025-01-03"),
-      },
-      {
-        id: "admin_001",
-        nombre: "Admin Sistema",
-        email: "admin@example.com",
-        role: RoleType.ADMIN,
-        activo: true,
-        avatar: "/admin-avatar.png",
-        fechaCreacion: new Date("2025-01-01"),
-        fechaActualizacion: new Date("2025-01-01"),
-      },
-    ]
-
-    usuariosInicial.forEach((usr) => this.usuarios.set(usr.id, new UsuarioEntity(usr)))
-  }
+  private client = httpClient.getUsersClient()
 
   async obtenerPorId(id: string): Promise<UsuarioEntity | null> {
-    await this.delay(150)
-
-    const usuario = this.usuarios.get(id) || null
-    console.log("[v0] Usuario por ID:", id, usuario ? "encontrado" : "no encontrado")
-    return usuario
+    try {
+      const response = await this.client.get(`/api/usuarios/${id}`)
+      console.log("[v0] Usuario por ID:", id, "encontrado")
+      return mapUsuarioFromApi(response.data)
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.log("[v0] Usuario no encontrado:", id)
+        return null
+      }
+      console.error("[v0] Error obteniendo usuario:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener el usuario")
+    }
   }
 
   async obtenerPorEmail(email: string): Promise<UsuarioEntity | null> {
-    await this.delay(200)
+    try {
+      // Si la API no tiene endpoint por email, buscar en todos y filtrar
+      const response = await this.client.get("/api/usuarios", {
+        params: { email }
+      })
+      const usuarios = Array.isArray(response.data) ? response.data : [response.data]
+      const usuario = usuarios.find((u: any) => u.email === email)
+      console.log("[v0] Usuario por email:", email, usuario ? "encontrado" : "no encontrado")
+      return usuario ? mapUsuarioFromApi(usuario) : null
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.log("[v0] Usuario no encontrado por email:", email)
+        return null
+      }
+      console.error("[v0] Error obteniendo usuario por email:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener el usuario")
+    }
+  }
 
-    const usuario = Array.from(this.usuarios.values()).find((usr) => usr.email === email) || null
-    console.log("[v0] Usuario por email:", email, usuario ? "encontrado" : "no encontrado")
-    return usuario
+  async obtenerMiPerfil(): Promise<UsuarioEntity | null> {
+    try {
+      const response = await this.client.get("/api/usuarios/me")
+      console.log("[v0] Perfil obtenido")
+      return mapUsuarioFromApi(response.data)
+    } catch (error: any) {
+      if (error.response?.status === 404 || error.response?.status === 401) {
+        console.log("[v0] No se pudo obtener el perfil")
+        return null
+      }
+      console.error("[v0] Error obteniendo perfil:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener el perfil")
+    }
   }
 
   async crearUsuario(usuario: Usuario): Promise<UsuarioEntity> {
-    await this.delay(350)
-
-    if (this.usuarios.has(usuario.id)) {
-      throw new Error("El usuario ya existe")
+    try {
+      const payload = mapUsuarioToApi(usuario)
+      const response = await this.client.post("/api/usuarios", payload)
+      console.log("[v0] Usuario creado:", response.data.id, "Email:", response.data.email)
+      return mapUsuarioFromApi(response.data)
+    } catch (error: any) {
+      console.error("[v0] Error creando usuario:", error)
+      throw new Error(error.response?.data?.message || "Error al crear el usuario")
     }
-
-    // Validar email único
-    if (Array.from(this.usuarios.values()).some((u) => u.email === usuario.email)) {
-      throw new Error("El email ya está registrado")
-    }
-
-    const usuarioEntity = new UsuarioEntity(usuario)
-    this.usuarios.set(usuario.id, usuarioEntity)
-    console.log("[v0] Usuario creado:", usuario.id, "Email:", usuario.email)
-    return usuarioEntity
   }
 
   async actualizarUsuario(id: string, datos: Partial<Usuario>): Promise<UsuarioEntity | null> {
-    await this.delay(300)
-
-    const usuario = this.usuarios.get(id)
-    if (!usuario) {
-      console.warn("[v0] Usuario no encontrado para actualizar:", id)
-      return null
+    try {
+      const payload = mapUsuarioToApi(datos)
+      const response = await this.client.put(`/api/usuarios/${id}`, payload)
+      console.log("[v0] Usuario actualizado:", id)
+      return mapUsuarioFromApi(response.data)
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.warn("[v0] Usuario no encontrado para actualizar:", id)
+        return null
+      }
+      console.error("[v0] Error actualizando usuario:", error)
+      throw new Error(error.response?.data?.message || "Error al actualizar el usuario")
     }
+  }
 
-    const actualizado = new UsuarioEntity({
-      ...usuario,
-      ...datos,
-      fechaActualizacion: new Date(),
-    })
-    this.usuarios.set(id, actualizado)
-
-    console.log("[v0] Usuario actualizado:", id)
-    return actualizado
+  async actualizarMiPerfil(datos: Partial<Usuario>): Promise<UsuarioEntity | null> {
+    try {
+      const payload = mapUsuarioToApi(datos)
+      const response = await this.client.put("/api/usuarios/me", payload)
+      console.log("[v0] Perfil actualizado")
+      return mapUsuarioFromApi(response.data)
+    } catch (error: any) {
+      console.error("[v0] Error actualizando perfil:", error)
+      throw new Error(error.response?.data?.message || "Error al actualizar el perfil")
+    }
   }
 
   async obtenerTodos(): Promise<UsuarioEntity[]> {
-    await this.delay(300)
-
-    const usuarios = Array.from(this.usuarios.values())
-    console.log("[v0] Total de usuarios:", usuarios.length)
-    return usuarios
+    try {
+      const response = await this.client.get("/api/usuarios")
+      const usuarios = Array.isArray(response.data) ? response.data : []
+      console.log("[v0] Total de usuarios:", usuarios.length)
+      return usuarios.map(mapUsuarioFromApi)
+    } catch (error: any) {
+      console.error("[v0] Error obteniendo usuarios:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener usuarios")
+    }
   }
 
   async obtenerPorRole(role: RoleType): Promise<UsuarioEntity[]> {
-    await this.delay(200)
-
-    const usuarios = Array.from(this.usuarios.values()).filter((u) => u.role === role)
-    console.log("[v0] Usuarios con rol:", role, "cantidad:", usuarios.length)
-    return usuarios
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+    try {
+      const response = await this.client.get("/api/usuarios", {
+        params: { role }
+      })
+      const usuarios = Array.isArray(response.data) ? response.data : []
+      const filtered = usuarios.filter((u: any) => u.role === role)
+      console.log("[v0] Usuarios con rol:", role, "cantidad:", filtered.length)
+      return filtered.map(mapUsuarioFromApi)
+    } catch (error: any) {
+      console.error("[v0] Error obteniendo usuarios por rol:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener usuarios por rol")
+    }
   }
 }
 

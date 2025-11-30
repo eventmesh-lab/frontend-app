@@ -4,7 +4,9 @@ import type React from "react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Lock, ArrowRight } from "lucide-react"
+
 import { apiConfig } from "../../config/env"
+
 
 export default function ChangePasswordPage() {
     const [email, setEmail] = useState("")
@@ -43,30 +45,15 @@ export default function ChangePasswordPage() {
         setIsLoading(true)
 
         try {
+
             const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.changePassword(email)}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ newPassword })
+
             })
-
-            if (!response.ok) {
-                // Intenta parsear el cuerpo como JSON
-                let errorMessage = "Error en el registro";
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || JSON.stringify(errorData);
-                } catch (jsonError) {
-                    // Si no es JSON válido, intenta leer como texto
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
-                }
-
-                console.error("Error de registro:", errorMessage);
-                setError(errorMessage);
-                return; // Evita continuar con el flujo si hubo error
-            }
             setShowSuccess(true);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al cambiar la contraseña")

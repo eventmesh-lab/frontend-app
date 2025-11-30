@@ -72,11 +72,6 @@ export default function UpdateUserPage() {
                     birthdate: fechaNacimiento === "" ? null : fechaNacimiento,
                 }),
             })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.message || "Error al actualizar el usuario")
-            }
             setShowSuccess(true);
         } catch (err) {
             console.error("Error de red/conexión:", err);

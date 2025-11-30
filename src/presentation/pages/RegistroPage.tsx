@@ -143,22 +143,6 @@ export default function RegistroPage() {
                     password: password,
                 })
             })
-            if (!response.ok) {
-                // Intenta parsear el cuerpo como JSON
-                let errorMessage = "Error en el registro";
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || JSON.stringify(errorData);
-                } catch (jsonError) {
-                    // Si no es JSON válido, intenta leer como texto
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
-                }
-
-                console.error("Error de registro:", errorMessage);
-                setError(errorMessage);
-                return; // Evita continuar con el flujo si hubo error
-            }
 
 
             // Si el backend devuelve el token o datos del usuario, puedes iniciar sesión

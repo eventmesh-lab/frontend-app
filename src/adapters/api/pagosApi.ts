@@ -1,86 +1,124 @@
 import { type Pago, EstadoPago, PagoEntity } from "../../domain/entities/Pago"
+import { httpClient } from "./httpClient"
+
+/**
+ * Mapea un pago desde la API a PagoEntity
+ */
+function mapPagoFromApi(data: any): PagoEntity {
+  return new PagoEntity({
+    id: data.id,
+    reservaId: data.reservaId,
+    usuarioId: data.usuarioId,
+    monto: data.monto,
+    concepto: data.concepto,
+    estado: data.estado as EstadoPago,
+    metodo: data.metodo,
+    transaccionId: data.transaccionId,
+    fechaCreacion: new Date(data.fechaCreacion || new Date()),
+    fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
+  })
+}
+
+/**
+ * Mapea un pago para enviarlo a la API
+ */
+function mapPagoToApi(pago: Partial<Pago>): any {
+  const mapped: any = { ...pago }
+  if (pago.fechaCreacion) {
+    mapped.fechaCreacion = pago.fechaCreacion instanceof Date ? pago.fechaCreacion.toISOString() : pago.fechaCreacion
+  }
+  if (pago.fechaActualizacion) {
+    mapped.fechaActualizacion = pago.fechaActualizacion instanceof Date ? pago.fechaActualizacion.toISOString() : pago.fechaActualizacion
+  }
+  return mapped
+}
 
 class PagosApiAdapter {
-  private pagos = new Map<string, PagoEntity>()
-  private pagoIdCounter = 1000
+  private client = httpClient.getBaseClient()
 
-  async crearPago(pago: Pago): Promise<PagoEntity> {
-    await this.delay(350)
-
-    if (this.pagos.has(pago.id)) {
-      throw new Error("El pago ya existe")
+  async crearPago(pago: Partial<Pago>): Promise<PagoEntity> {
+    try {
+      // La API espera reservaId, monto, concepto y metodo
+      const payload = {
+        reservaId: pago.reservaId,
+        monto: pago.monto,
+        concepto: pago.concepto,
+        metodo: pago.metodo,
+      }
+      const response = await this.client.post("/api/pagos", payload)
+      console.log("[v0] Pago creado:", response.data.id, "Monto:", response.data.monto)
+      return mapPagoFromApi(response.data)
+    } catch (error: any) {
+      console.error("[v0] Error creando pago:", error)
+      throw new Error(error.response?.data?.message || "Error al crear el pago")
     }
-
-    const pagoEntity = new PagoEntity(pago)
-    this.pagos.set(pago.id, pagoEntity)
-    console.log("[v0] Pago creado:", pago.id, "Monto:", pago.monto)
-    return pagoEntity
   }
 
-  async procesarPago(pagoId: string): Promise<PagoEntity | null> {
-    await this.delay(800) // Simular procesamiento más lento
-
-    const pago = this.pagos.get(pagoId)
-    if (!pago) {
-      console.warn("[v0] Pago no encontrado para procesar:", pagoId)
-      return null
+  async procesarPago(pagoId: string, transaccionId?: string): Promise<PagoEntity | null> {
+    try {
+      const payload = transaccionId ? { transaccionId } : {}
+      const response = await this.client.post(`/api/pagos/${pagoId}/procesar`, payload)
+      console.log("[v0] Pago procesado:", pagoId, "Estado:", response.data.estado)
+      return mapPagoFromApi(response.data)
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.warn("[v0] Pago no encontrado para procesar:", pagoId)
+        return null
+      }
+      console.error("[v0] Error procesando pago:", error)
+      throw new Error(error.response?.data?.message || "Error al procesar el pago")
     }
-
-    // Simular posibilidad de fallo (90% éxito)
-    const exito = Math.random() < 0.9
-    if (!exito) {
-      pago.estado = EstadoPago.FALLIDO
-      console.log("[v0] Pago fallido (simulado):", pagoId)
-    } else {
-      pago.estado = EstadoPago.COMPLETADO
-      pago.transaccionId = `TRX${Date.now()}`
-      console.log("[v0] Pago procesado exitosamente:", pagoId, "ID:", pago.transaccionId)
-    }
-
-    pago.fechaActualizacion = new Date()
-    this.pagos.set(pagoId, pago)
-
-    return pago
   }
 
   async obtenerDetalle(id: string): Promise<PagoEntity | null> {
-    await this.delay(150)
+    try {
+      const response = await this.client.get(`/api/pagos/${id}`)
+      console.log("[v0] Detalle pago:", id, "encontrado")
+      return mapPagoFromApi(response.data)
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.log("[v0] Pago no encontrado:", id)
+        return null
+      }
+      console.error("[v0] Error obteniendo detalle:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener el pago")
+    }
+  }
 
-    const pago = this.pagos.get(id) || null
-    console.log("[v0] Detalle pago:", id, pago ? "encontrado" : "no encontrado")
-    return pago
+  async obtenerMisPagos(): Promise<PagoEntity[]> {
+    try {
+      const response = await this.client.get("/api/mis-pagos")
+      const pagos = Array.isArray(response.data) ? response.data : []
+      console.log("[v0] Pagos obtenidos:", pagos.length)
+      return pagos.map(mapPagoFromApi)
+    } catch (error: any) {
+      console.error("[v0] Error obteniendo pagos:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener los pagos")
+    }
   }
 
   async obtenerPorUsuario(usuarioId: string): Promise<PagoEntity[]> {
-    await this.delay(200)
-
-    const pagos = Array.from(this.pagos.values()).filter((pago) => pago.usuarioId === usuarioId)
-
-    console.log("[v0] Pagos del usuario:", usuarioId, "cantidad:", pagos.length)
-    return pagos
+    try {
+      // Si la API no tiene endpoint específico, usar mis-pagos o filtrar
+      const response = await this.client.get("/api/mis-pagos")
+      const pagos = Array.isArray(response.data) ? response.data : []
+      const filtered = pagos.filter((p: any) => p.usuarioId === usuarioId)
+      console.log("[v0] Pagos del usuario:", usuarioId, "cantidad:", filtered.length)
+      return filtered.map(mapPagoFromApi)
+    } catch (error: any) {
+      console.error("[v0] Error obteniendo pagos del usuario:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener los pagos")
+    }
   }
 
   async reembolsarPago(pagoId: string): Promise<void> {
-    await this.delay(400)
-
-    const pago = this.pagos.get(pagoId)
-    if (!pago) {
-      throw new Error("Pago no encontrado")
+    try {
+      await this.client.post(`/api/pagos/${pagoId}/reembolsar`)
+      console.log("[v0] Pago reembolsado:", pagoId)
+    } catch (error: any) {
+      console.error("[v0] Error reembolsando pago:", error)
+      throw new Error(error.response?.data?.message || "Error al reembolsar el pago")
     }
-
-    if (!pago.completado()) {
-      throw new Error("Solo se pueden reembolsar pagos completados")
-    }
-
-    pago.estado = EstadoPago.REEMBOLSADO
-    pago.fechaActualizacion = new Date()
-    this.pagos.set(pagoId, pago)
-
-    console.log("[v0] Pago reembolsado:", pagoId)
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 }
 

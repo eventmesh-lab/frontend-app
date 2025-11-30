@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import useAuth from "../contexts/Auth"
 import { User, ShieldCheck, LogOut, Calendar, Mail, MapPin, Phone, Clock } from "lucide-react"
+
 import { apiConfig } from "../../config/env"
 
 export default function PerfilUsuarioPage() {
