@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom"
 import { Mail, Phone, User, Calendar, Home, ArrowLeft } from "lucide-react"
-import { httpClient } from "../../adapters/api/httpClient"
+import { apiConfig } from "../../config/env"
 
 type UserProfile = {
     firstName: string
@@ -25,15 +25,17 @@ export default function UserDetailPage() {
         const fetchUser = async () => {
             setIsLoading(true)
             try {
-                const client = httpClient.getUsersClient()
-                const response = await client.get("/api/users/getUsers")
-                const data: UserProfile[] = response.data
+                const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.getAll}`)
+                if (!response.ok) throw new Error("Error al obtener usuarios")
+
+                const data: UserProfile[] = await response.json()
                 const foundUser = data.find(u => u.email === email)
 
                 if (!foundUser) throw new Error("Usuario no encontrado")
                 setUser(foundUser)
-            } catch (err: any) {
-                setError(err.response?.data?.message || err.message || "Error desconocido")
+            } catch (err) {
+                console.error("Error de red/conexi�n:", err);
+                setError("No se pudo conectar con el servidor. Verifica tu conexi�n.");
             } finally {
                 setIsLoading(false)
             }

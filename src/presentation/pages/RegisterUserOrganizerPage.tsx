@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { httpClient } from "../../adapters/api/httpClient"
 import { ArrowRight, Mail, Lock, User, Calendar } from "lucide-react"
+import { apiConfig } from "../../config/env"
 
 export default function RegistroPage() {
     const [nombre, setNombre] = useState("")
@@ -127,16 +128,21 @@ export default function RegistroPage() {
         setIsLoading(true)
 
         try {
-            const client = httpClient.getUsersClient()
-            const response = await client.post("/api/users/registerUser", {
-                firstName: nombre,
-                lastName: apellido,
-                email: email,
-                phoneNumber: telefono,
-                address: direccion,
-                birthdate: fechaNacimiento,
-                roleUser: rol,
-                password: password,
+            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.register}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    firstName: nombre,
+                    lastName: apellido,
+                    email: email,
+                    phoneNumber: telefono,
+                    address: direccion,
+                    birthdate: fechaNacimiento,
+                    roleUser: rol,
+                    password: password,
+                })
             })
 
             console.log("Registro exitoso:", response.data)
