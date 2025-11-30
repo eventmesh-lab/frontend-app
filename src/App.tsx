@@ -11,15 +11,14 @@ import EventosPage from "./presentation/pages/EventosPage"
 import DetalleEventoPage from "./presentation/pages/DetalleEventoPage"
 import MisReservasPage from "./presentation/pages/MisReservasPage"
 import OrganizadorDashboardPage from "./presentation/pages/OrganizadorDashboardPage"
+import CrearEventoPage from "./presentation/pages/CrearEventoPage"
+import DetalleEventoOrganizadorPage from "./presentation/pages/DetalleEventoOrganizadorPage"
 import AdminDashboardPage from "./presentation/pages/AdminDashboardPage"
 import ProfileUserPage from "./presentation/pages/ProfileUserPage"
 import ChangePasswordPage from "./presentation/pages/ChangePasswordPage"
 import UserDetailPage from "./presentation/pages/UserDetailPage"
 import UserByAdminPage from "./presentation/pages/UserByAdminPage"
 import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
-import { RoleType } from "./domain/entities/Usuario"
-import React from "react"
-import ReactDOM from "react-dom/client"
 import UpdateUserPage from "./presentation/pages/UpdateUserPage"
 
 function App() {
@@ -79,6 +78,22 @@ function App() {
                             element={
                                 <PrivateRoute requiredRole="Organizador">
                                     <OrganizadorDashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/organizador/crear-evento"
+                            element={
+                                <PrivateRoute requiredRole="Organizador">
+                                    <CrearEventoPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/organizador/evento/:id"
+                            element={
+                                <PrivateRoute requiredRole="Organizador">
+                                    <DetalleEventoOrganizadorPage />
                                 </PrivateRoute>
                             }
                         />
