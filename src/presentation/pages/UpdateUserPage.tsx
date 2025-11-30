@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Calendar, User, Phone, MapPin } from "lucide-react"
 import useAuth from "../contexts/Auth"
+import { apiConfig } from "../../config/env"
 
 export default function UpdateUserPage() {
     const { isAuthenticated, username } = useAuth()
@@ -60,7 +61,7 @@ export default function UpdateUserPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch(`http://localhost:7181/api/users/updateUser/${username}`, {
+            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.update(username!)}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { ArrowRight, Mail, Lock, User, Calendar } from "lucide-react"
+import { apiConfig } from "../../config/env"
 
 export default function RegistroPage() {
   const [nombre, setNombre] = useState("")
@@ -126,7 +127,7 @@ export default function RegistroPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch("http://localhost:7181/api/users/registerUser", {
+            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.register}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

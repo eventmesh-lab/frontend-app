@@ -7,6 +7,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom"
 import axios from 'axios';
 //import { useAuth } from "../contexts/AuthContext"
 import useAuth from "../contexts/Auth"
+import { keycloakConfig } from "../../config/env"
 
 export default function LoginPage() {
     const [email, setEmail] = useState("")
@@ -28,29 +29,27 @@ export default function LoginPage() {
         e.preventDefault();
         setError(null)
         setIsLoading(true)
-        const config = {
+        const authConfig = {
             username: email,
             password: password,
-            client_id: 'aspnetcore',
-            //client_id: 'admin-cli',
-            realm: 'myrealm',
-            //realm: 'master',
-            keycloakBaseUrl: 'http://localhost:8180',
-            cliente_secret: 'PzaioIxlVKVINnJ7VJwCILdBoUlUWB05'
+            client_id: keycloakConfig.clientId,
+            realm: keycloakConfig.realm,
+            keycloakBaseUrl: keycloakConfig.url,
+            cliente_secret: keycloakConfig.clientSecret
         };
         console.log("Email:", email)
         console.log("Password:", password)
-        console.log("Email:", config.username)
-        console.log("Password:", config.password)
+        console.log("Email:", authConfig.username)
+        console.log("Password:", authConfig.password)
         try {
             const response = await axios.post(
-                `${config.keycloakBaseUrl}/realms/${config.realm}/protocol/openid-connect/token`,
+                `${authConfig.keycloakBaseUrl}/realms/${authConfig.realm}/protocol/openid-connect/token`,
                 new URLSearchParams({
                     grant_type:'password',
-                    client_id:config.client_id,
-                    username:config.username,
-                    password: config.password,
-                    client_secret: config.cliente_secret
+                    client_id:authConfig.client_id,
+                    username:authConfig.username,
+                    password: authConfig.password,
+                    client_secret: authConfig.cliente_secret
                 }),
                 {
                     headers: {

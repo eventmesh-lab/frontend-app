@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Lock, ArrowRight } from "lucide-react"
+import { apiConfig } from "../../config/env"
 
 export default function ChangePasswordPage() {
     const [email, setEmail] = useState("")
@@ -42,7 +43,7 @@ export default function ChangePasswordPage() {
         setIsLoading(true)
 
         try {
-            const response = await fetch(`http://localhost:7181/api/users/changePassword/${email}`, {
+            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.changePassword(email)}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

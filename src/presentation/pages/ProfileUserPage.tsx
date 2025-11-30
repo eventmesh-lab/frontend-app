@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import useAuth from "../contexts/Auth"
 import { User, ShieldCheck, LogOut, Calendar, Mail, MapPin, Phone, Clock } from "lucide-react"
+import { apiConfig } from "../../config/env"
 
 export default function PerfilUsuarioPage() {
     interface Usuario {
@@ -29,7 +30,7 @@ export default function PerfilUsuarioPage() {
         console.log("Perfil cargado:", { username, role, isAuthenticated })
 
         if (username) {
-            fetch(`http://localhost:7181/api/users/getUser/${username}`, {
+            fetch(`${apiConfig.baseUrl}${apiConfig.users.getOne(username)}`, {
                 method: 'GET',
             })
                 .then((res) => res.json())
@@ -59,13 +60,13 @@ export default function PerfilUsuarioPage() {
             <div className="py-20 px-4 sm:px-6 lg:px-8 text-center space-y-6">
                 <h2 className="text-3xl font-bold text-text-primary">Acceso restringido</h2>
                 <p className="text-lg text-text-secondary">
-                    Debes iniciar sesión para ver tu perfil.
+                    Debes iniciar sesiï¿½n para ver tu perfil.
                 </p>
                 <Link
                     to="/login"
                     className="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors inline-flex items-center gap-2 justify-center"
                 >
-                    Iniciar Sesión
+                    Iniciar Sesiï¿½n
                     <LogOut className="w-5 h-5" />
                 </Link>
             </div>
