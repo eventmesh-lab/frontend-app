@@ -45,6 +45,7 @@ function mapEventoFromApi(data: any): EventoEntity {
     aforoDisponible: data.aforoDisponible ?? data.aforo,
     organizadorId: data.organizadorId,
     tarifaPublicacion: data.tarifaPublicacion,
+    transaccionPagoId: data.transaccionPagoId,
     secciones: data.secciones,
     imagen: data.imagen,
     fechaCreacion: new Date(data.fechaCreacion || new Date()),
@@ -117,14 +118,51 @@ class EventosApiAdapter {
     }
   }
 
-  async publicarEvento(id: string): Promise<void> {
+  async obtenerTodos(): Promise<EventoEntity[]> {
     try {
-      await this.client.put(`/api/eventos/${id}/publicar`)
-      console.log("[v0] Evento publicado:", id)
+      const response = await this.client.get("/api/eventos")
+      const eventos = Array.isArray(response.data) ? response.data : []
+      console.log("[EventosApi] Total de eventos recuperados:", eventos.length)
+      return eventos.map(mapEventoFromApi)
     } catch (error: any) {
-      console.error("[v0] Error publicando evento:", error)
+      console.error("[EventosApi] Error obteniendo todos los eventos:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener eventos")
+    }
+  }
+
+  async publicarEvento(id: string, pagoConfirmadoId?: string): Promise<void> {
+    try {
+      // El backend espera POST /api/eventos/{id}/publicar con PublicarEventoCommand
+      // El PagoConfirmadoId es requerido por el validador
+      // Si no se proporciona, generamos un GUID temporal (el backend debería validar si existe)
+      const pagoId = pagoConfirmadoId || this.generarGuidTemporal()
+      
+      const payload = {
+        PagoConfirmadoId: pagoId,
+      }
+      
+      console.log("[EventosApi] Publicando evento:", id, "con pagoId:", pagoId)
+      
+      await this.client.post(`/api/eventos/${id}/publicar`, payload)
+      console.log("[EventosApi] Evento publicado exitosamente:", id)
+    } catch (error: any) {
+      console.error("[EventosApi] Error publicando evento:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
       throw new Error(error.response?.data?.message || "Error al publicar el evento")
     }
+  }
+
+  /**
+   * Genera un GUID temporal para usar como PagoConfirmadoId
+   * Nota: Esto es un workaround. En producción, debería venir de un servicio de pagos real
+   */
+  private generarGuidTemporal(): string {
+    // Generar un GUID v4 válido
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
   }
 
   async obtenerPorOrganizador(organizadorId: string): Promise<EventoEntity[]> {

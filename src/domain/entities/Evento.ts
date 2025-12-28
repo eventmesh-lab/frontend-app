@@ -39,6 +39,7 @@ export interface Evento {
   aforoDisponible: number
   organizadorId: string
   tarifaPublicacion?: number
+  transaccionPagoId?: string
   secciones?: SeccionEvento[]
   imagen?: string
   fechaCreacion: Date
@@ -61,6 +62,7 @@ export class EventoEntity implements Evento {
   aforoDisponible: number
   organizadorId: string
   tarifaPublicacion?: number
+  transaccionPagoId?: string
   secciones?: SeccionEvento[]
   imagen?: string
   fechaCreacion: Date
@@ -82,6 +84,7 @@ export class EventoEntity implements Evento {
     this.aforoDisponible = data.aforoDisponible
     this.organizadorId = data.organizadorId
     this.tarifaPublicacion = data.tarifaPublicacion
+    this.transaccionPagoId = data.transaccionPagoId
     this.secciones = data.secciones
     this.imagen = data.imagen
     this.fechaCreacion = data.fechaCreacion
@@ -114,6 +117,10 @@ export class EventoEntity implements Evento {
 
   puedePagarPublicacion(): boolean {
     return this.estaBorrador()
+  }
+
+  estaPagado(): boolean {
+    return !!this.transaccionPagoId && this.transaccionPagoId !== ""
   }
 
   puedeIniciar(): boolean {
