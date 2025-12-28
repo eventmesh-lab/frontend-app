@@ -6,10 +6,12 @@ import { useSignalR } from "../hooks/useSignalR"
 import { useEventos } from "../hooks/useEventos"
 import { useReservas } from "../hooks/useReservas"
 import { usePagos } from "../hooks/usePagos"
+import { useTickets } from "../hooks/useTickets"
 import Button from "../components/ui/Button"
 import LoadingSpinner from "../components/ui/LoadingSpinner"
 import Alert from "../components/ui/Alert"
 import FormField from "../components/ui/FormField"
+import Breadcrumb from "../components/common/Breadcrumb"
 
 export default function DetalleEventoPage() {
   const { id } = useParams<{ id: string }>()
@@ -21,6 +23,7 @@ export default function DetalleEventoPage() {
   const { eventoDetalle, isLoading: loadingEvento, obtenerDetalle } = useEventos()
   const { reservas, isLoading: loadingReserva, crearReserva } = useReservas()
   const { crearPago, procesarPago, isLoading: loadingPago } = usePagos()
+  const { generarTickets, confirmarTickets, isLoading: loadingTickets } = useTickets()
 
   const [cantidad, setCantidad] = useState(1)
   const [error, setError] = useState<string | null>(null)
@@ -44,8 +47,9 @@ export default function DetalleEventoPage() {
 
   if (!eventoDetalle) {
     return (
-      <div className="max-w-7xl mx-auto">
-        <Alert type="error" title="Evento no encontrado">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumb />
+        <Alert type="error" title="Evento no encontrado" className="mt-4">
           El evento que buscas no existe o ha sido eliminado.
         </Alert>
         <Button onClick={() => navigate("/eventos")} className="mt-4">
@@ -65,14 +69,23 @@ export default function DetalleEventoPage() {
       setError(null)
       setSuccess(null)
 
-      // Crear reserva
+      // Paso 1: Crear reserva
       const reserva = await crearReserva({
         asistenteId: usuario.id,
         eventoId: eventoDetalle.id,
         cantidad,
       })
 
-      // Crear pago
+      // Paso 2: Generar tickets para la reserva
+      const ticketsResult = await generarTickets({
+        eventoId: eventoDetalle.id,
+        reservaId: reserva.id,
+        asistenteId: usuario.id,
+        cantidad,
+        precioUnitario: eventoDetalle.precio,
+      })
+
+      // Paso 3: Crear pago
       const pago = await crearPago({
         usuarioId: usuario.id,
         reservaId: reserva.id,
@@ -81,11 +94,24 @@ export default function DetalleEventoPage() {
         metodo: "tarjeta",
       })
 
-      // Procesar pago
+      // Paso 4: Procesar pago
       await procesarPago(pago.id)
+
+      // Paso 5: Confirmar tickets después del pago exitoso
+      if (ticketsResult.ticketIds && ticketsResult.ticketIds.length > 0) {
+        await confirmarTickets({
+          pagoId: pago.id,
+          ticketIds: ticketsResult.ticketIds,
+        })
+      }
 
       // Notificar
       notificarReservaConfirmada(eventoDetalle.nombre, cantidad, reserva.montoTotal)
+      agregarNotificacion({
+        tipo: "success",
+        titulo: "Reserva confirmada",
+        mensaje: `${cantidad} ticket(s) generado(s) y confirmado(s) para ${eventoDetalle.nombre}`,
+      })
       setSuccess(
         `Reserva confirmada. ${cantidad} entrada(s) por $${reserva.montoTotal}. Código: ${reserva.codigoReserva}`,
       )
@@ -95,20 +121,31 @@ export default function DetalleEventoPage() {
         navigate("/mis-reservas")
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear la reserva")
+      setError(err instanceof Error ? err.message : "Error al crear la reserva y generar tickets")
     }
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-        {/* Galería */}
-        <div className="mb-8 rounded-lg overflow-hidden">
-          <img
-            src={eventoDetalle.imagen || "/placeholder.svg?height=400&width=800&query=evento"}
-            alt={eventoDetalle.nombre}
-            className="w-full h-96 object-cover"
-          />
-        </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <nav className="flex items-center gap-2 text-sm mb-6">
+        <button
+          onClick={() => navigate("/eventos")}
+          className="text-text-secondary hover:text-primary transition-colors"
+        >
+          ← Volver a Eventos
+        </button>
+        <span className="text-text-tertiary">/</span>
+        <span className="text-text-primary font-medium">{eventoDetalle.nombre}</span>
+      </nav>
+      
+      {/* Galería */}
+      <div className="mb-8 rounded-lg overflow-hidden">
+        <img
+          src={eventoDetalle.imagen || "/placeholder.svg?height=400&width=800&query=evento"}
+          alt={eventoDetalle.nombre}
+          className="w-full h-96 object-cover"
+        />
+      </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Información Principal */}
@@ -214,8 +251,8 @@ export default function DetalleEventoPage() {
 
                   <Button
                     onClick={handleReservar}
-                    disabled={loadingReserva || loadingPago}
-                    loading={loadingReserva || loadingPago}
+                    disabled={loadingReserva || loadingPago || loadingTickets}
+                    loading={loadingReserva || loadingPago || loadingTickets}
                     className="w-full"
                   >
                     Reservar Ahora
@@ -233,6 +270,6 @@ export default function DetalleEventoPage() {
             </div>
           </div>
         </div>
-      </div>
+    </div>
   )
 }

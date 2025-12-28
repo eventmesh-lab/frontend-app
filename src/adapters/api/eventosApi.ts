@@ -170,12 +170,66 @@ class EventosApiAdapter {
    */
   async crearEventoConSecciones(data: CrearEventoApiDTO): Promise<EventoEntity> {
     try {
-      const response = await this.client.post("/api/eventos", data)
-      console.log("[v0] Evento creado con secciones:", response.data.id)
-      return mapEventoFromApi(response.data)
+      // El backend espera propiedades con mayúscula inicial (C# naming convention)
+      // Mapear el payload al formato que espera el backend
+      const payload = {
+        Nombre: data.nombre,
+        Descripcion: data.descripcion,
+        Fecha: data.fecha, // ISO string
+        HorasDuracion: data.horasDuracion,
+        MinutosDuracion: data.minutosDuracion,
+        OrganizadorId: data.organizadorId,
+        VenueId: data.venueId,
+        Categoria: data.categoria,
+        TarifaPublicacion: data.tarifaPublicacion,
+        Secciones: data.secciones.map(s => ({
+          Nombre: s.nombre,
+          Capacidad: s.capacidad,
+          Precio: s.precio,
+          TipoAsiento: s.tipoAsiento || null,
+        })),
+      }
+
+      console.log("[EventosApi] Payload a enviar:", JSON.stringify(payload, null, 2))
+
+      const response = await this.client.post("/api/eventos", payload)
+      console.log("[EventosApi] Respuesta del backend:", response.data)
+      
+      // El backend devuelve CrearEventoCommandResponse que solo tiene { Id: guid }
+      // Necesitamos obtener el evento completo después de crearlo
+      const eventoId = response.data?.Id || response.data?.id
+      
+      if (!eventoId) {
+        throw new Error("La respuesta del servidor no contiene el ID del evento creado")
+      }
+      
+      console.log("[EventosApi] Evento creado con ID:", eventoId)
+      
+      // Obtener el evento completo desde el backend
+      // Esperar un momento para que el backend procese la creación
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const eventoCompleto = await this.obtenerDetalle(eventoId)
+      
+      if (!eventoCompleto) {
+        throw new Error("Evento creado pero no se pudo obtener la información completa")
+      }
+      
+      return eventoCompleto
     } catch (error: any) {
-      console.error("[v0] Error creando evento con secciones:", error)
-      throw new Error(error.response?.data?.message || "Error al crear el evento")
+      console.error("[EventosApi] Error creando evento con secciones:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
+      console.error("[EventosApi] Error status:", error.response?.status)
+      
+      // Extraer mensaje de error más detallado
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.response?.data?.title ||
+        error.response?.data?.errors?.join?.(", ") ||
+        error.message ||
+        "Error al crear el evento"
+      
+      throw new Error(errorMessage)
     }
   }
 

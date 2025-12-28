@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import useAuth from "../contexts/Auth"
 import { useEventos } from "../hooks/useEventos"
+import { getUserIdFromEmail } from "../../utils/userIdHelper"
 import OrganizadorLayout from "../layouts/OrganizadorLayout"
 import EventoCard from "../components/eventos/EventoCard"
 import LoadingSpinner from "../components/ui/LoadingSpinner"
@@ -17,21 +18,26 @@ import { EstadoEvento } from "../../domain/entities/Evento"
 /**
  * Dashboard del Organizador
  * Muestra estadísticas y lista de eventos del organizador
- * Usa el email (username) como organizadorId temporal
+ * Usa el email convertido a GUID determinístico como organizadorId
  */
 export default function OrganizadorDashboardPage() {
   const navigate = useNavigate()
-  const { username } = useAuth()
+  const { username, isAuthenticated } = useAuth()
   const { eventos, isLoading, error, obtenerMisEventos, publicarEvento } = useEventos()
 
   // Cargar eventos del organizador al montar el componente
-  // TODO: Reemplazar username con el ID real cuando se implemente
   useEffect(() => {
-    if (username) {
-      console.log("[OrganizadorDashboard] Cargando eventos para:", username)
-      obtenerMisEventos(username) // Usando email como organizadorId temporal
+    if (username && isAuthenticated) {
+      try {
+        // Convertir el email a un GUID determinístico para usar como organizadorId
+        const organizadorId = getUserIdFromEmail(username)
+        console.log("[OrganizadorDashboard] Cargando eventos para organizador:", organizadorId, "(email:", username, ")")
+        obtenerMisEventos(organizadorId)
+      } catch (err) {
+        console.error("[OrganizadorDashboard] Error generando ID desde email:", err)
+      }
     }
-  }, [username, obtenerMisEventos])
+  }, [username, isAuthenticated, obtenerMisEventos])
 
   // Filtrar eventos por estado (usando los nuevos valores del enum)
   const eventosPublicados = eventos.filter((e) => e.estado === EstadoEvento.PUBLICADO)
