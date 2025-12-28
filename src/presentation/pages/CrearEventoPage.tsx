@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import useAuth from "../contexts/Auth"
 import { useEventos, type CrearEventoConSeccionesDTO } from "../hooks/useEventos"
+import { getUserIdFromEmail } from "../../utils/userIdHelper"
 import OrganizadorLayout from "../layouts/OrganizadorLayout"
 import Card from "../components/ui/Card"
 import Button from "../components/ui/Button"
@@ -34,6 +35,43 @@ const CATEGORIAS = [
 const TIPOS_ASIENTO: TipoAsiento[] = ["General", "Numerado"]
 
 /**
+ * Venues (lugares) disponibles para los eventos
+ * Lista hardcodeada de lugares con sus GUIDs
+ */
+const VENUES = [
+  {
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    nombre: "Teatro Nacional",
+    direccion: "Av. Principal 123, Ciudad",
+  },
+  {
+    id: "660e8400-e29b-41d4-a716-446655440001",
+    nombre: "Estadio Central",
+    direccion: "Calle Deportiva 456, Ciudad",
+  },
+  {
+    id: "770e8400-e29b-41d4-a716-446655440002",
+    nombre: "Centro de Convenciones",
+    direccion: "Boulevard Empresarial 789, Ciudad",
+  },
+  {
+    id: "880e8400-e29b-41d4-a716-446655440003",
+    nombre: "Auditorio Municipal",
+    direccion: "Plaza Central 321, Ciudad",
+  },
+  {
+    id: "990e8400-e29b-41d4-a716-446655440004",
+    nombre: "Arena Deportiva",
+    direccion: "Zona Deportiva 654, Ciudad",
+  },
+  {
+    id: "aa0e8400-e29b-41d4-a716-446655440005",
+    nombre: "Sala de Conciertos",
+    direccion: "Distrito Musical 987, Ciudad",
+  },
+]
+
+/**
  * Plantilla para una nueva sección vacía
  */
 const crearSeccionVacia = (): SeccionEvento => ({
@@ -49,7 +87,7 @@ const crearSeccionVacia = (): SeccionEvento => ({
  */
 export default function CrearEventoPage() {
   const navigate = useNavigate()
-  const { username } = useAuth() // username = email del usuario (solución temporal como organizadorId)
+  const { username, isAuthenticated } = useAuth() // username = email del usuario
   const { crearEventoConSecciones, isLoading, error } = useEventos()
 
   // Estado del formulario
@@ -139,6 +177,12 @@ export default function CrearEventoPage() {
 
     if (!formData.venueId.trim()) {
       nuevosErrores.venueId = "El lugar es requerido"
+    } else {
+      // Validar que venueId sea uno de los venues disponibles
+      const venueExiste = VENUES.some(v => v.id === formData.venueId.trim())
+      if (!venueExiste) {
+        nuevosErrores.venueId = "Debes seleccionar un lugar válido"
+      }
     }
 
     if (!formData.categoria) {
@@ -178,27 +222,42 @@ export default function CrearEventoPage() {
       return
     }
 
-    if (!username) {
+    if (!username || !isAuthenticated) {
       setSubmitError("Debes estar autenticado para crear un evento")
       return
     }
 
     try {
+      // Convertir el email a GUID determinístico para usar como organizadorId
+      const organizadorId = getUserIdFromEmail(username)
+      console.log("[CrearEvento] Creando evento para organizador:", organizadorId, "(email:", username, ")")
+
       const datos: CrearEventoConSeccionesDTO = {
         nombre: formData.nombre,
         descripcion: formData.descripcion,
         fecha: new Date(formData.fecha),
         horasDuracion: formData.horasDuracion,
         minutosDuracion: formData.minutosDuracion,
-        // TODO: Reemplazar con ID real cuando se implemente
-        organizadorId: username, // Usando email como ID temporal
+        organizadorId: organizadorId, // GUID generado desde el email
         venueId: formData.venueId,
         categoria: formData.categoria,
         tarifaPublicacion: formData.tarifaPublicacion,
-        secciones: secciones,
+        secciones: secciones.map(s => ({
+          nombre: s.nombre,
+          capacidad: s.capacidad,
+          precio: s.precio,
+          tipoAsiento: s.tipoAsiento,
+        })),
       }
 
-      await crearEventoConSecciones(datos)
+      console.log("[CrearEvento] Payload a enviar:", JSON.stringify({
+        ...datos,
+        fecha: datos.fecha.toISOString(),
+      }, null, 2))
+
+      const eventoCreado = await crearEventoConSecciones(datos)
+      console.log("[CrearEvento] Evento creado exitosamente:", eventoCreado)
+      
       setSubmitSuccess(true)
       
       // Redirigir al dashboard después de 2 segundos
@@ -206,7 +265,21 @@ export default function CrearEventoPage() {
         navigate("/organizador")
       }, 2000)
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Error al crear el evento")
+      console.error("[CrearEvento] Error al crear evento:", err)
+      
+      // Extraer mensaje de error de forma más robusta
+      let errorMessage = "Error al crear el evento"
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'string') {
+        errorMessage = err
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String(err.message)
+      }
+      
+      setSubmitError(errorMessage)
+      setSubmitSuccess(false)
+      // No redirigir si hay error, dejar que el usuario vea el mensaje
     }
   }
 
@@ -312,13 +385,24 @@ export default function CrearEventoPage() {
               </FormField>
 
               <FormField label="Lugar (Venue)" required error={errores.venueId}>
-                <Input
+                <select
                   name="venueId"
                   value={formData.venueId}
                   onChange={handleChange}
-                  placeholder="Ej: Teatro Principal, Estadio Central..."
-                  error={errores.venueId}
-                />
+                  className={`w-full px-3 py-2 border border-border rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                    errores.venueId ? "border-danger" : ""
+                  }`}
+                >
+                  <option value="">Selecciona un lugar</option>
+                  {VENUES.map((venue) => (
+                    <option key={venue.id} value={venue.id}>
+                      {venue.nombre} - {venue.direccion}
+                    </option>
+                  ))}
+                </select>
+                {errores.venueId && (
+                  <p className="text-xs text-danger mt-1">{errores.venueId}</p>
+                )}
               </FormField>
 
               <FormField label="Tarifa de Publicación ($)" error={errores.tarifaPublicacion}>
@@ -438,14 +522,32 @@ export default function CrearEventoPage() {
             </div>
           </Card>
 
-          {/* Botones de acción */}
-          <div className="flex gap-4 justify-end">
-            <Button type="button" variant="outline" onClick={() => navigate("/organizador")}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" loading={isLoading} disabled={isLoading}>
-              Crear Evento
-            </Button>
+          {/* Botones de acción - Siempre visible al final del formulario */}
+          <div className="mt-8 pt-6 border-t-2 border-border-light">
+            <div className="flex gap-4 justify-end items-center">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => navigate("/organizador")} 
+                disabled={isLoading}
+                size="lg"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                variant="primary" 
+                size="lg" 
+                loading={isLoading} 
+                disabled={isLoading}
+                className="min-w-[180px] font-bold"
+              >
+                {isLoading ? "Creando Evento..." : "✨ Crear Evento"}
+              </Button>
+            </div>
+            <p className="text-xs text-text-tertiary text-center mt-4">
+              Al crear el evento, estará en estado Borrador hasta que pagues la tarifa de publicación
+            </p>
           </div>
         </form>
       </div>

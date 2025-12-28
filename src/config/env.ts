@@ -66,6 +66,22 @@ export const keycloakConfig = {
 }
 
 /**
+ * Configuración de la API de Tickets
+ */
+export const ticketsConfig = {
+  /** URL base del servicio de tickets */
+  baseUrl: import.meta.env.VITE_TICKETS_API_URL || 'http://localhost:5005',
+  
+  /** Endpoints específicos de tickets */
+  tickets: {
+    generar: '/api/tickets/generar',
+    confirmar: '/api/tickets/confirmar',
+    validar: '/api/tickets/validar',
+    cancelar: '/api/tickets/cancelar',
+  }
+}
+
+/**
  * Configuración de SignalR para notificaciones en tiempo real
  */
 export const signalRConfig = {
@@ -79,6 +95,7 @@ export const signalRConfig = {
 export const config = {
   api: apiConfig,
   events: eventsConfig,
+  tickets: ticketsConfig,
   keycloak: keycloakConfig,
   signalR: signalRConfig,
 }

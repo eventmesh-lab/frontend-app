@@ -31,17 +31,17 @@ export default function EventoCard({
 
   return (
     <Card hover className="overflow-hidden flex flex-col h-full">
-      {/* Imagen */}
-      <div className="mb-4 -mx-6 -mt-6">
+      {/* Imagen clickeable */}
+      <Link to={`/eventos/${evento.id}`} className="mb-4 -mx-6 -mt-6 block">
         <img
           src={evento.imagen || "/placeholder.svg?height=200&width=400&query=evento"}
           alt={evento.nombre}
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
         />
-      </div>
+      </Link>
 
-      {/* Contenido */}
-      <div className="flex-grow">
+      {/* Contenido clickeable */}
+      <Link to={`/eventos/${evento.id}`} className="flex-grow block hover:opacity-90 transition-opacity">
         <div className="flex justify-between items-start gap-2 mb-2">
           <h3 className="font-bold text-lg text-text-primary line-clamp-2">{evento.nombre}</h3>
           <Badge variant={estadoBadgeVariant[evento.estado] || "primary"}>{evento.estado}</Badge>
@@ -72,7 +72,7 @@ export default function EventoCard({
             {evento.aforoDisponible} de {evento.aforo} lugares
           </p>
         </div>
-      </div>
+      </Link>
 
       {/* Acciones */}
       <div className="flex gap-2 pt-4 border-t border-border-light">

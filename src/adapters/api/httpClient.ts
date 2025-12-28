@@ -9,10 +9,13 @@ class HttpClient {
   private eventsApiClient: AxiosInstance
   private usersApiClient: AxiosInstance
   private baseApiClient: AxiosInstance
+  private ticketsApiClient: AxiosInstance
 
   constructor() {
-    const eventsApiUrl = import.meta.env.VITE_EVENTS_API_URL || 'http://localhost:3000'
-    const usersApiUrl = import.meta.env.VITE_USERS_API_URL || 'http://localhost:3000'
+    // URLs por defecto según los puertos de los contenedores Docker
+    const eventsApiUrl = import.meta.env.VITE_EVENTS_API_URL || 'http://localhost:5000'
+    const usersApiUrl = import.meta.env.VITE_USERS_API_URL || 'http://localhost:7181'
+    const ticketsApiUrl = import.meta.env.VITE_TICKETS_API_URL || 'http://localhost:5005'
     const baseApiUrl = import.meta.env.VITE_API_BASE_URL || eventsApiUrl
 
     // Cliente para Events API
@@ -39,10 +42,19 @@ class HttpClient {
       },
     })
 
+    // Cliente para Tickets API
+    this.ticketsApiClient = axios.create({
+      baseURL: ticketsApiUrl,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
     // Interceptores para agregar token de autenticación
     this.setupInterceptors(this.eventsApiClient)
     this.setupInterceptors(this.usersApiClient)
     this.setupInterceptors(this.baseApiClient)
+    this.setupInterceptors(this.ticketsApiClient)
   }
 
   private setupInterceptors(client: AxiosInstance): void {
@@ -101,6 +113,13 @@ class HttpClient {
    */
   getBaseClient(): AxiosInstance {
     return this.baseApiClient
+  }
+
+  /**
+   * Obtiene el cliente para Tickets API
+   */
+  getTicketsClient(): AxiosInstance {
+    return this.ticketsApiClient
   }
 }
 
