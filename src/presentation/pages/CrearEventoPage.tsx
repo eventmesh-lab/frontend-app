@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import useAuth from "../contexts/Auth"
 import { useEventos, type CrearEventoConSeccionesDTO } from "../hooks/useEventos"
 import { getUserIdFromEmail } from "../../utils/userIdHelper"
+import { venuesService } from "../../application/services/venuesService"
 import OrganizadorLayout from "../layouts/OrganizadorLayout"
 import Card from "../components/ui/Card"
 import Button from "../components/ui/Button"
@@ -12,6 +13,7 @@ import Input from "../components/ui/Input"
 import FormField from "../components/ui/FormField"
 import Alert from "../components/ui/Alert"
 import type { SeccionEvento, TipoAsiento } from "../../domain/entities/Evento"
+import type { Venue } from "../../domain/entities/Venue"
 
 /**
  * Categorías disponibles para los eventos
@@ -90,6 +92,9 @@ export default function CrearEventoPage() {
   const { username, isAuthenticated } = useAuth() // username = email del usuario
   const { crearEventoConSecciones, isLoading, error } = useEventos()
 
+  // Estado de venues
+  const [venues, setVenues] = useState<Venue[]>([])
+
   // Estado del formulario
   const [formData, setFormData] = useState({
     nombre: "",
@@ -108,6 +113,19 @@ export default function CrearEventoPage() {
   // Estado de errores de validación
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Cargar venues al montar el componente
+  useEffect(() => {
+    const cargarVenues = () => {
+      try {
+        const todosVenues = venuesService.obtenerTodos()
+        setVenues(todosVenues)
+      } catch (err) {
+        console.error("[CrearEvento] Error cargando venues:", err)
+      }
+    }
+    cargarVenues()
+  }, [])
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
   /**
@@ -394,7 +412,7 @@ export default function CrearEventoPage() {
                   }`}
                 >
                   <option value="">Selecciona un lugar</option>
-                  {VENUES.map((venue) => (
+                  {venues.map((venue) => (
                     <option key={venue.id} value={venue.id}>
                       {venue.nombre} - {venue.direccion}
                     </option>

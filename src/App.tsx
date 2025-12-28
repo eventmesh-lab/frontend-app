@@ -15,6 +15,8 @@ import MisEventosOrganizadorPage from "./presentation/pages/MisEventosOrganizado
 import CrearEventoPage from "./presentation/pages/CrearEventoPage"
 import DetalleEventoOrganizadorPage from "./presentation/pages/DetalleEventoOrganizadorPage"
 import AdminDashboardPage from "./presentation/pages/AdminDashboardPage"
+import AdminEventosPage from "./presentation/pages/AdminEventosPage"
+import AdminVenuesPage from "./presentation/pages/AdminVenuesPage"
 import ProfileUserPage from "./presentation/pages/ProfileUserPage"
 import ChangePasswordPage from "./presentation/pages/ChangePasswordPage"
 import UserDetailPage from "./presentation/pages/UserDetailPage"
@@ -105,6 +107,22 @@ function App() {
                             element={
                                 <PrivateRoute requiredRole="admin">
                                     <AdminDashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/eventos"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <AdminEventosPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/venues"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <AdminVenuesPage />
                                 </PrivateRoute>
                             }
                         />

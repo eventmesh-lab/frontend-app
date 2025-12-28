@@ -47,10 +47,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               Usuarios
             </Link>
-             <Link
+            <Link
+              to="/admin/venues"
+              className={`block px-4 py-2 rounded-md transition-colors ${
+                isActive("/admin/venues") ? "bg-primary text-white" : "text-text-secondary hover:bg-bg-secondary"
+              }`}
+            >
+              Venues
+            </Link>
+            <Link
               to="/admin/registerOrganizer"
               className={`block px-4 py-2 rounded-md transition-colors ${
-                isActive("/admin/usuarios") ? "bg-primary text-white" : "text-text-secondary hover:bg-bg-secondary"
+                isActive("/admin/registerOrganizer") ? "bg-primary text-white" : "text-text-secondary hover:bg-bg-secondary"
               }`}
             >
               Crear Organizador

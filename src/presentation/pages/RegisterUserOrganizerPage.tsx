@@ -1,474 +1,484 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { useAuth } from "../contexts/AuthContext"
-import { httpClient } from "../../adapters/api/httpClient"
-import { ArrowRight, Mail, Lock, User, Calendar } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import AdminLayout from "../layouts/AdminLayout"
+import Card from "../components/ui/Card"
+import Button from "../components/ui/Button"
+import Input from "../components/ui/Input"
+import FormField from "../components/ui/FormField"
+import Alert from "../components/ui/Alert"
 import { apiConfig } from "../../config/env"
+import { Copy, Check, Mail, User, Phone, MapPin, Calendar, Lock } from "lucide-react"
 
-export default function RegistroPage() {
-    const [nombre, setNombre] = useState("")
-    const [apellido, setApellido] = useState("")
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [passwordConfirm, setPasswordConfirm] = useState("")
-    const [telefono, setTelefono] = useState("")
-    const [direccion, setDireccion] = useState("")
-    const [fechaNacimiento, setFechaNacimiento] = useState("")
-    const [rol, setRol] = useState("Organizador")
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [acceptTerms, setAcceptTerms] = useState(false)
-    const [showSuccess, setShowSuccess] = useState(false);
+/**
+ * Genera una contraseña segura aleatoria
+ */
+function generarPasswordSegura(): string {
+  const longitud = 12
+  const mayusculas = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  const minusculas = "abcdefghijklmnopqrstuvwxyz"
+  const numeros = "0123456789"
+  const simbolos = "!@#$%&*"
+  const todos = mayusculas + minusculas + numeros + simbolos
 
-    const { login, initiateOAuth } = useAuth()
-    const navigate = useNavigate()
+  let password = ""
+  // Asegurar al menos un carácter de cada tipo
+  password += mayusculas[Math.floor(Math.random() * mayusculas.length)]
+  password += minusculas[Math.floor(Math.random() * minusculas.length)]
+  password += numeros[Math.floor(Math.random() * numeros.length)]
+  password += simbolos[Math.floor(Math.random() * simbolos.length)]
 
-    const validateForm = (): boolean => {
-        if (!nombre.trim()) {
-            setError("El nombre es requerido")
-            return false
-        }
-        if (nombre.trim().length < 2) {
-            setError("El nombre debe tener al menos 2 caracteres")
-            return false
-        }
-        if (!apellido.trim()) {
-            setError("El apellido es requerido")
-            return false
-        }
-        if (apellido.trim().length < 2) {
-            setError("El apellido debe tener al menos 2 caracteres")
-            return false
-        }
-        if (!email.trim()) {
-            setError("El email es requerido")
-            return false
-        }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError("Por favor ingresa un email válido")
-            return false
-        }
-        if (!telefono.trim()) {
-            setError("El telefono es requerido")
-            return false
-        }
-        if (!/^\d{11}$/.test(telefono)) {
-            setError("El numero de telefono debe tener 11 digitos")
-            return false
-        }
-        if (!direccion.trim()) {
-            setError("La direccion es requerida")
-            return false
-        }
-        if (!fechaNacimiento.trim()) {
-            setError("La fecha de nacimiento es requerida")
-            return false
-        }
+  // Completar el resto de la contraseña
+  for (let i = password.length; i < longitud; i++) {
+    password += todos[Math.floor(Math.random() * todos.length)]
+  }
 
+  // Mezclar los caracteres
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("")
+}
 
-        const fecha = new Date(fechaNacimiento);
-        const hoy = new Date();
+interface CredencialesGeneradas {
+  email: string
+  password: string
+  nombre: string
+}
 
-        const edad = hoy.getFullYear() - fecha.getFullYear();
-        const mes = hoy.getMonth() - fecha.getMonth();
-        const dia = hoy.getDate() - fecha.getDate();
+/**
+ * Página para que el administrador cree un usuario tipo Organizador
+ * Genera una contraseña automáticamente y muestra las credenciales
+ */
+export default function RegisterUserOrganizerPage() {
+  const navigate = useNavigate()
 
-        const esMenorDe18 =
-            edad < 18 ||
-            (edad === 18 && mes < 0) ||
-            (edad === 18 && mes === 0 && dia < 0);
+  // Estado del formulario
+  const [formData, setFormData] = useState({
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    direccion: "",
+    fechaNacimiento: "",
+  })
 
-        if (esMenorDe18) {
-            setError("Debes tener al menos 18 años");
-            console.log("Fecha de nacimiento inválida para ser mayor de 18 años:", fechaNacimiento);
-            return false
-        }
+  // Estado de la aplicación
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [credenciales, setCredenciales] = useState<CredencialesGeneradas | null>(null)
+  const [copiado, setCopiado] = useState(false)
 
+  // Estado de errores de validación
+  const [errores, setErrores] = useState<Record<string, string>>({})
 
+  /**
+   * Maneja cambios en los campos del formulario
+   */
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    // Limpiar error del campo al modificar
+    if (errores[name]) {
+      setErrores((prev) => ({ ...prev, [name]: "" }))
+    }
+    setError(null)
+  }
 
-        if (!password) {
-            setError("La contraseña es requerida")
-            return false
-        }
-        if (password.length < 6) {
-            setError("La contraseña debe tener al menos 6 caracteres")
-            return false
-        }
-        if (password !== passwordConfirm) {
-            setError("Las contraseñas no coinciden")
-            return false
-        }
-        if (!acceptTerms) {
-            setError("Debes aceptar los términos y condiciones")
-            return false
-        }
-        return true
+  /**
+   * Valida el formulario antes de enviar
+   */
+  const validarFormulario = (): boolean => {
+    const nuevosErrores: Record<string, string> = {}
+
+    if (!formData.nombre.trim()) {
+      nuevosErrores.nombre = "El nombre es requerido"
+    } else if (formData.nombre.trim().length < 2) {
+      nuevosErrores.nombre = "El nombre debe tener al menos 2 caracteres"
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setError(null)
-
-
-        console.log("Formulario enviado con los siguientes datos:")
-        console.log("Nombre:", nombre)
-        console.log("Email:", email)
-        console.log("Apellido:", apellido)
-        console.log("Teléfono:", telefono)
-        console.log("Dirección:", direccion)
-        console.log("Fecha de Nacimiento:", fechaNacimiento)
-        console.log("Rol:", rol)
-        console.log("Aceptó términos:", acceptTerms)
-
-        if (!validateForm()) return
-
-        setIsLoading(true)
-
-        try {
-            const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.register}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    firstName: nombre,
-                    lastName: apellido,
-                    email: email,
-                    phoneNumber: telefono,
-                    address: direccion,
-                    birthdate: fechaNacimiento,
-                    roleUser: rol,
-                    password: password,
-                })
-            })
-
-            console.log("Registro exitoso:", response.data)
-            setShowSuccess(true)
-            
-            // Opcional: redirigir al login después de un tiempo
-            setTimeout(() => {
-                navigate("/login")
-            }, 2000)
-        } catch (err: any) {
-            console.error("Error en la solicitud de registro:", err)
-            
-            // Manejar diferentes tipos de errores
-            let errorMessage = "Error en el registro"
-            
-            if (err.response) {
-                // Error de respuesta del servidor
-                const status = err.response.status
-                const errorData = err.response.data
-                
-                if (status === 404) {
-                    errorMessage = "El endpoint de registro no está disponible. Por favor, contacta al administrador."
-                } else if (status === 400) {
-                    errorMessage = errorData?.message || errorData?.error || "Datos inválidos. Por favor, verifica la información ingresada."
-                } else if (status === 409) {
-                    errorMessage = errorData?.message || "El email ya está registrado."
-                } else if (status === 500) {
-                    // Error del servidor - puede ser problema de base de datos
-                    const serverError = errorData?.message || ""
-                    if (serverError.includes("relation") && serverError.includes("does not exist")) {
-                        errorMessage = "Error del servidor: La base de datos no está configurada correctamente. Por favor, contacta al administrador."
-                    } else {
-                        errorMessage = `Error del servidor: ${serverError || "Error interno del servidor. Por favor, intenta más tarde o contacta al administrador."}`
-                    }
-                } else {
-                    errorMessage = errorData?.message || errorData?.error || JSON.stringify(errorData) || errorMessage
-                }
-            } else if (err.request) {
-                // Error de red (CORS, servidor no disponible, etc.)
-                errorMessage = "No se pudo conectar con el servidor. Verifica tu conexión o contacta al administrador."
-            } else {
-                // Otro tipo de error
-                errorMessage = err.message || errorMessage
-            }
-            
-            setError(errorMessage)
-        } finally {
-            setIsLoading(false)
-        }
+    if (!formData.apellido.trim()) {
+      nuevosErrores.apellido = "El apellido es requerido"
+    } else if (formData.apellido.trim().length < 2) {
+      nuevosErrores.apellido = "El apellido debe tener al menos 2 caracteres"
     }
 
-
-
-
-    const handleOAuth = () => {
-        initiateOAuth()
+    if (!formData.email.trim()) {
+      nuevosErrores.email = "El email es requerido"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      nuevosErrores.email = "Por favor ingresa un email válido"
     }
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bg-secondary to-white py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                {/* Logo */}
-                <div>
-                    <div className="flex justify-center mb-6">
-                        <Link to="/" className="flex items-center gap-2">
-                            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-xl">E</span>
-                            </div>
-                            <span className="text-xl font-bold text-text-primary hidden sm:inline">EventHub</span>
-                        </Link>
-                    </div>
-                    <h2 className="mt-6 text-center text-3xl font-bold text-text-primary">Crea tu cuenta</h2>
-                    <p className="mt-2 text-center text-text-secondary">Únete a EventHub en menos de un minuto</p>
-                </div>
+    if (!formData.telefono.trim()) {
+      nuevosErrores.telefono = "El teléfono es requerido"
+    } else if (!/^\d{11}$/.test(formData.telefono)) {
+      nuevosErrores.telefono = "El número de teléfono debe tener 11 dígitos"
+    }
 
-                {/* Registration Form */}
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        {/* Nombre */}
-                        <div>
-                            <label htmlFor="nombre" className="block text-sm font-medium text-text-primary mb-2">
-                                Nombre
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="nombre"
-                                    name="nombre"
-                                    type="text"
-                                    autoComplete="name"
-                                    required
-                                    value={nombre}
-                                    onChange={(e) => setNombre(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="Juan"
-                                />
-                            </div>
-                        </div>
+    if (!formData.direccion.trim()) {
+      nuevosErrores.direccion = "La dirección es requerida"
+    }
 
-                        {/* Apellido */}
-                        <div>
-                            <label htmlFor="apellido" className="block text-sm font-medium text-text-primary mb-2">
-                                Apellido
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="apellido"
-                                    name="apellido"
-                                    type="text"
-                                    autoComplete="apellido"
-                                    required
-                                    value={apellido}
-                                    onChange={(e) => setApellido(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="Pérez"
-                                />
-                            </div>
-                        </div>
+    if (!formData.fechaNacimiento.trim()) {
+      nuevosErrores.fechaNacimiento = "La fecha de nacimiento es requerida"
+    } else {
+      const fecha = new Date(formData.fechaNacimiento)
+      const hoy = new Date()
+      const edad = hoy.getFullYear() - fecha.getFullYear()
+      const mes = hoy.getMonth() - fecha.getMonth()
+      const dia = hoy.getDate() - fecha.getDate()
 
-                        {/* Telefono */}
-                        <div>
-                            <label htmlFor="apellido" className="block text-sm font-medium text-text-primary mb-2">
-                                Teléfono
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="telefono"
-                                    name="telefono"
-                                    type="text"
-                                    autoComplete="telefono"
-                                    required
-                                    value={telefono}
-                                    onChange={(e) => setTelefono(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="04121234567"
-                                />
-                            </div>
-                        </div>
+      const esMenorDe18 =
+        edad < 18 || (edad === 18 && mes < 0) || (edad === 18 && mes === 0 && dia < 0)
 
-                        {/* Direccion */}
-                        <div>
-                            <label htmlFor="direccion" className="block text-sm font-medium text-text-primary mb-2">
-                                Dirección
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="direccion"
-                                    name="direccion"
-                                    type="text"
-                                    autoComplete="direccion"
-                                    required
-                                    value={direccion}
-                                    onChange={(e) => setDireccion(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="Caracas"
-                                />
-                            </div>
-                        </div>
+      if (esMenorDe18) {
+        nuevosErrores.fechaNacimiento = "Debe tener al menos 18 años"
+      }
+    }
 
-                        {/* Fecha de nacimiento */}
-                        <div>
-                            <label htmlFor="fechaHora" className="block text-sm font-medium text-text-primary mb-2">
-                                Fecha de nacimiento
-                            </label>
-                            <div className="relative">
-                                <Calendar className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="fechaHora"
-                                    name="fechaHora"
-                                    type="datetime-local"
-                                    required
-                                    value={fechaNacimiento}
-                                    onChange={(e) => setFechaNacimiento(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                />
-                            </div>
-                        </div>
+    setErrores(nuevosErrores)
+    return Object.keys(nuevosErrores).length === 0
+  }
 
+  /**
+   * Envía el formulario para crear el organizador
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setCredenciales(null)
+    setCopiado(false)
 
-                        {/* Email */}
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
-                                Email
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    autoComplete="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="tu@ejemplo.com"
-                                />
-                            </div>
-                        </div>
+    if (!validarFormulario()) {
+      return
+    }
 
-                        {/* Password */}
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
-                                Contraseña
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="Mínimo 6 caracteres"
-                                />
-                            </div>
-                        </div>
+    setIsLoading(true)
 
-                        {/* Confirm Password */}
-                        <div>
-                            <label htmlFor="passwordConfirm" className="block text-sm font-medium text-text-primary mb-2">
-                                Confirmar Contraseña
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-3 w-5 h-5 text-text-tertiary" />
-                                <input
-                                    id="passwordConfirm"
-                                    name="passwordConfirm"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    required
-                                    value={passwordConfirm}
-                                    onChange={(e) => setPasswordConfirm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-text-primary placeholder-text-tertiary"
-                                    placeholder="Repite tu contraseña"
-                                />
-                            </div>
-                        </div>
-                    </div>
+    try {
+      // Generar contraseña automáticamente
+      const passwordGenerada = generarPasswordSegura()
 
-                    {/* Terms Checkbox */}
-                    <div className="flex items-center">
-                        <input
-                            id="terms"
-                            name="terms"
-                            type="checkbox"
-                            checked={acceptTerms}
-                            onChange={(e) => setAcceptTerms(e.target.checked)}
-                            className="h-4 w-4 text-primary border-border rounded focus:ring-primary"
-                        />
-                        <label htmlFor="terms" className="ml-2 block text-sm text-text-secondary">
-                            Acepto los{" "}
-                            <a href="#" className="text-primary hover:text-primary-dark font-medium">
-                                términos y condiciones
-                            </a>
-                        </label>
-                    </div>
-                    {/* Error Alert */}
-                    {error && (
-                        <div className="rounded-md bg-red-50 p-4 border border-red-200">
-                            <p className="text-sm font-medium text-red-800">{error}</p>
-                        </div>
-                    )}
+      // Preparar el payload según la API
+      const payload = {
+        firstName: formData.nombre.trim(),
+        lastName: formData.apellido.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phoneNumber: formData.telefono.trim(),
+        address: formData.direccion.trim(),
+        birthdate: formData.fechaNacimiento,
+        roleUser: "Organizador",
+        password: passwordGenerada,
+      }
 
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full inline-flex justify-center items-center gap-2 py-2 px-4 border border-border rounded-lg shadow-sm bg-white text-sm font-medium text-text-primary hover:bg-bg-secondary transition-colors"
+      console.log("[RegisterOrganizer] Creando organizador:", payload.email)
 
-                    >
-                        {isLoading ? "Registrando..." : "Registrarse"}
-                        {!isLoading && <ArrowRight className="h-4 w-4" />}
-                    </button>
+      const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.register}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
 
-                    {/* Divider */}
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-text-tertiary">O continúa con</span>
-                        </div>
-                    </div>
-                </form>
-                {showSuccess && (
-                    <div className="fixed bottom-4 right-4 bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg shadow-md z-50">
-                        <div className="flex items-center justify-between gap-4">
-                            <span className="text-sm">¡Registro exitoso!</span>
-                            <button
-                                onClick={() => {
-                                    setShowSuccess(false);
-                                    navigate("/"); // o "/login"
-                                }}
-                                className="text-sm font-medium text-green-700 hover:underline"
-                            >
-                                Aceptar
-                            </button>
-                        </div>
-                    </div>
-                )}
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Error desconocido" }))
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`)
+      }
 
+      const data = await response.json()
+      console.log("[RegisterOrganizer] Organizador creado exitosamente:", data)
 
-                {/* Login Link */}
-                <div className="text-center">
-                    <p className="text-text-secondary">
-                        ¿Ya tienes cuenta?{" "}
-                        <Link to="/login" className="text-primary hover:text-primary-dark font-semibold transition-colors">
-                            Inicia sesión
-                        </Link>
-                    </p>
-                </div>
+      // Guardar las credenciales para mostrarlas
+      setCredenciales({
+        email: formData.email.trim().toLowerCase(),
+        password: passwordGenerada,
+        nombre: `${formData.nombre} ${formData.apellido}`,
+      })
 
-                {/* Back to Home */}
-                <div className="text-center">
-                    <Link to="/" className="text-sm text-text-tertiary hover:text-text-secondary transition-colors">
-                        Volver al inicio
-                    </Link>
-                </div>
-            </div>
+      // Limpiar el formulario
+      setFormData({
+        nombre: "",
+        apellido: "",
+        email: "",
+        telefono: "",
+        direccion: "",
+        fechaNacimiento: "",
+      })
+    } catch (err: any) {
+      console.error("[RegisterOrganizer] Error creando organizador:", err)
+      setError(err.message || "Error al crear el organizador")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  /**
+   * Copia las credenciales al portapapeles
+   */
+  const copiarCredenciales = async () => {
+    if (!credenciales) return
+
+    const texto = `Credenciales del Organizador
+
+Email: ${credenciales.email}
+Contraseña: ${credenciales.password}
+
+Nombre: ${credenciales.nombre}
+
+Por favor, comparte estas credenciales de forma segura con el organizador.`
+
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch (err) {
+      console.error("Error copiando al portapapeles:", err)
+      // Fallback: seleccionar texto manualmente
+      const textarea = document.createElement("textarea")
+      textarea.value = texto
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textarea)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
+  }
+
+  return (
+    <AdminLayout>
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Crear Nuevo Organizador</h1>
+          <p className="text-text-secondary">
+            Completa la información del organizador. Se generará una contraseña automáticamente.
+          </p>
         </div>
-    )
+
+        {/* Mensaje de éxito con credenciales */}
+        {credenciales && (
+          <Card className="mb-6 bg-green-50 border-green-200">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-green-800 mb-2">
+                  ✅ Organizador creado exitosamente
+                </h2>
+                <p className="text-green-700 mb-4">
+                  Las credenciales se han generado. Compártelas de forma segura con el organizador.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copiarCredenciales}
+                className="flex items-center gap-2"
+              >
+                {copiado ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copiado
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copiar
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-green-300 space-y-3">
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Nombre Completo</label>
+                <p className="text-lg font-semibold text-text-primary">{credenciales.nombre}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Email</label>
+                <p className="text-lg font-mono text-text-primary">{credenciales.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Contraseña Generada</label>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-mono text-text-primary font-bold">{credenciales.password}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(credenciales.password)
+                      setCopiado(true)
+                      setTimeout(() => setCopiado(false), 2000)
+                    }}
+                    className="p-1"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>Importante:</strong> Guarda estas credenciales de forma segura. La contraseña no se
+                mostrará nuevamente.
+              </p>
+            </div>
+          </Card>
+        )}
+
+        {/* Mensaje de error */}
+        {error && (
+          <Alert type="error" className="mb-6">
+            {error}
+          </Alert>
+        )}
+
+        {/* Formulario */}
+        <Card>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nombre */}
+              <FormField label="Nombre" required error={errores.nombre}>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    name="nombre"
+                    type="text"
+                    value={formData.nombre}
+                    onChange={handleChange}
+                    placeholder="Juan"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.nombre ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Apellido */}
+              <FormField label="Apellido" required error={errores.apellido}>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    name="apellido"
+                    type="text"
+                    value={formData.apellido}
+                    onChange={handleChange}
+                    placeholder="Pérez"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.apellido ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Email */}
+              <FormField label="Email" required error={errores.email}>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="organizador@ejemplo.com"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.email ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Teléfono */}
+              <FormField label="Teléfono" required error={errores.telefono}>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    name="telefono"
+                    type="text"
+                    value={formData.telefono}
+                    onChange={handleChange}
+                    placeholder="04121234567"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.telefono ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Dirección */}
+              <div className="md:col-span-2">
+                <FormField label="Dirección" required error={errores.direccion}>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                    <input
+                      name="direccion"
+                      type="text"
+                      value={formData.direccion}
+                      onChange={handleChange}
+                      placeholder="Caracas, Venezuela"
+                      className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                        errores.direccion ? "border-danger focus:ring-danger" : ""
+                      }`}
+                    />
+                  </div>
+                </FormField>
+              </div>
+
+              {/* Fecha de Nacimiento */}
+              <div className="md:col-span-2">
+                <FormField label="Fecha de Nacimiento" required error={errores.fechaNacimiento}>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                    <input
+                      type="date"
+                      name="fechaNacimiento"
+                      value={formData.fechaNacimiento}
+                      onChange={handleChange}
+                      className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                        errores.fechaNacimiento ? "border-danger focus:ring-danger" : ""
+                      }`}
+                    />
+                  </div>
+                </FormField>
+              </div>
+            </div>
+
+            {/* Información sobre la contraseña */}
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 mb-1">
+                    Contraseña generada automáticamente</p>
+                  <p className="text-xs text-blue-700">
+                    Se generará una contraseña segura de 12 caracteres que incluye mayúsculas, minúsculas,
+                    números y símbolos. Las credenciales se mostrarán después de crear el organizador.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="mt-8 flex gap-4 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/admin")}
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" loading={isLoading} disabled={isLoading}>
+                {isLoading ? "Creando Organizador..." : "Crear Organizador"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    </AdminLayout>
+  )
 }
