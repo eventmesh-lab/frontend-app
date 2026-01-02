@@ -238,7 +238,18 @@ export default function DetalleEventoOrganizadorPage() {
               <p className="text-text-secondary mb-2">
                 Tu evento está en borrador. Para publicarlo, debes pagar la tarifa de publicación.
               </p>
-              <Button variant="primary" onClick={() => setShowPagarModal(true)}>
+              <Button 
+                variant="primary" 
+                onClick={() => {
+                  // Generar transaccionPagoId automáticamente al abrir el modal
+                  const uuid = crypto.randomUUID()
+                  setPagoData({
+                    transaccionPagoId: uuid,
+                    monto: eventoDetalle.tarifaPublicacion || 0,
+                  })
+                  setShowPagarModal(true)
+                }}
+              >
                 💳 Pagar Publicación (${eventoDetalle.tarifaPublicacion || 0})
               </Button>
             </div>

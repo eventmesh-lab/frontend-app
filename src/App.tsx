@@ -85,6 +85,14 @@ function App() {
                             }
                         />
                         <Route
+                            path="/organizador/mis-eventos"
+                            element={
+                                <PrivateRoute requiredRole="Organizador">
+                                    <MisEventosOrganizadorPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
                             path="/organizador/crear-evento"
                             element={
                                 <PrivateRoute requiredRole="Organizador">

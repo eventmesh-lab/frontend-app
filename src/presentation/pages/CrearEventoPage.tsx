@@ -104,7 +104,6 @@ export default function CrearEventoPage() {
     minutosDuracion: 0,
     venueId: "",
     categoria: "",
-    tarifaPublicacion: 50,
   })
 
   // Estado de las secciones (al menos una requerida)
@@ -126,6 +125,31 @@ export default function CrearEventoPage() {
     }
     cargarVenues()
   }, [])
+
+  /**
+   * Calcula la tarifa de publicación automáticamente
+   * Fórmula: $100 (base) + 0.1% de (precio × 60% de capacidad) por cada sección
+   */
+  const calcularTarifaPublicacion = (): number => {
+    const COSTO_BASE = 100
+    const PORCENTAJE_ENTRADAS = 0.6 // 60% del total de entradas
+    const PORCENTAJE_TARIFA = 0.001 // 0.1%
+
+    // Calcular: Σ(precio_sección × capacidad_sección × 0.6) para cada sección
+    const totalEntradasEstimadas = secciones.reduce((sum, seccion) => {
+      const entradasEstimadas = seccion.capacidad * PORCENTAJE_ENTRADAS
+      return sum + (seccion.precio * entradasEstimadas)
+    }, 0)
+
+    // Aplicar 0.1% sobre el total
+    const tarifaVariable = totalEntradasEstimadas * PORCENTAJE_TARIFA
+
+    // Sumar costo base
+    const tarifaTotal = COSTO_BASE + tarifaVariable
+
+    // Redondear a 2 decimales
+    return Math.round(tarifaTotal * 100) / 100
+  }
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
   /**
@@ -207,10 +231,6 @@ export default function CrearEventoPage() {
       nuevosErrores.categoria = "La categoría es requerida"
     }
 
-    if (formData.tarifaPublicacion < 0) {
-      nuevosErrores.tarifaPublicacion = "La tarifa no puede ser negativa"
-    }
-
     // Validar secciones
     secciones.forEach((seccion, index) => {
       if (!seccion.nombre.trim()) {
@@ -250,6 +270,9 @@ export default function CrearEventoPage() {
       const organizadorId = getUserIdFromEmail(username)
       console.log("[CrearEvento] Creando evento para organizador:", organizadorId, "(email:", username, ")")
 
+      // Calcular tarifa de publicación automáticamente
+      const tarifaPublicacion = calcularTarifaPublicacion()
+
       const datos: CrearEventoConSeccionesDTO = {
         nombre: formData.nombre,
         descripcion: formData.descripcion,
@@ -259,7 +282,7 @@ export default function CrearEventoPage() {
         organizadorId: organizadorId, // GUID generado desde el email
         venueId: formData.venueId,
         categoria: formData.categoria,
-        tarifaPublicacion: formData.tarifaPublicacion,
+        tarifaPublicacion: tarifaPublicacion,
         secciones: secciones.map(s => ({
           nombre: s.nombre,
           capacidad: s.capacidad,
@@ -423,16 +446,6 @@ export default function CrearEventoPage() {
                 )}
               </FormField>
 
-              <FormField label="Tarifa de Publicación ($)" error={errores.tarifaPublicacion}>
-                <Input
-                  type="number"
-                  name="tarifaPublicacion"
-                  value={formData.tarifaPublicacion}
-                  onChange={handleChange}
-                  min={0}
-                  error={errores.tarifaPublicacion}
-                />
-              </FormField>
             </div>
           </Card>
 
@@ -534,8 +547,11 @@ export default function CrearEventoPage() {
                 <p className="text-text-secondary text-sm">Rango de Precios</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-warning">${formData.tarifaPublicacion}</p>
-                <p className="text-text-secondary text-sm">Tarifa Publicación</p>
+                <p className="text-2xl font-bold text-warning">${calcularTarifaPublicacion().toFixed(2)}</p>
+                <p className="text-text-secondary text-sm">Tarifa Publicación*</p>
+                <p className="text-xs text-text-tertiary mt-1">
+                  *Calculada automáticamente: $100 base + 0.1% de ingresos estimados
+                </p>
               </div>
             </div>
           </Card>
