@@ -112,7 +112,9 @@ export class EventoEntity implements Evento {
   }
 
   puedeReservar(): boolean {
-    return this.estaPublicado() && this.aforoDisponible > 0
+    // Solo verificar que el evento esté publicado
+    // La validación de capacidad la maneja el API de tickets
+    return this.estaPublicado()
   }
 
   puedePagarPublicacion(): boolean {

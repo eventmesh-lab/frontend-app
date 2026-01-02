@@ -30,9 +30,12 @@ export default function MisEventosOrganizadorPage() {
         console.log("[MisEventosOrganizador] Cargando eventos para organizador:", organizadorId, "(email:", username, ")")
         obtenerMisEventos(organizadorId).catch((err) => {
           console.error("[MisEventosOrganizador] Error cargando eventos:", err)
+          // No bloquear el acceso si hay un error - simplemente mostrar el error
+          // El componente mostrará el EmptyState si no hay eventos o el error si hay uno
         })
       } catch (err) {
         console.error("[MisEventosOrganizador] Error generando ID desde email:", err)
+        // No bloquear el acceso si hay un error al generar el ID
       }
     }
   }, [username, isAuthenticated, obtenerMisEventos])

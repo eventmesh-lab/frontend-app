@@ -7,6 +7,7 @@ import { useEventos } from "../hooks/useEventos"
 import { useReservas } from "../hooks/useReservas"
 import { usePagos } from "../hooks/usePagos"
 import { useTickets } from "../hooks/useTickets"
+import { EstadoEvento } from "../../domain/entities/Evento"
 import Button from "../components/ui/Button"
 import LoadingSpinner from "../components/ui/LoadingSpinner"
 import Alert from "../components/ui/Alert"
@@ -26,6 +27,7 @@ export default function DetalleEventoPage() {
   const { generarTickets, confirmarTickets, isLoading: loadingTickets } = useTickets()
 
   const [cantidad, setCantidad] = useState(1)
+  const [seccionSeleccionada, setSeccionSeleccionada] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -36,6 +38,59 @@ export default function DetalleEventoPage() {
       })
     }
   }, [id, obtenerDetalle])
+
+  // Inicializar sección seleccionada cuando se carga el evento
+  useEffect(() => {
+    if (eventoDetalle?.secciones && eventoDetalle.secciones.length > 0) {
+      // Seleccionar la primera sección por defecto
+      if (!seccionSeleccionada) {
+        setSeccionSeleccionada(eventoDetalle.secciones[0].id || eventoDetalle.secciones[0].nombre)
+      }
+    }
+  }, [eventoDetalle, seccionSeleccionada])
+
+  /**
+   * Obtiene el precio actual según la sección seleccionada
+   */
+  const obtenerPrecioActual = (): number => {
+    if (!eventoDetalle) return 0
+
+    // Si hay secciones, usar el precio de la sección seleccionada
+    if (eventoDetalle.secciones && eventoDetalle.secciones.length > 0) {
+      if (seccionSeleccionada) {
+        const seccion = eventoDetalle.secciones.find(
+          (s) => s.id === seccionSeleccionada || s.nombre === seccionSeleccionada
+        )
+        if (seccion) {
+          return seccion.precio
+        }
+      }
+      // Si no hay sección seleccionada, usar el precio mínimo
+      return Math.min(...eventoDetalle.secciones.map((s) => s.precio))
+    }
+
+    // Si no hay secciones, usar el precio del evento
+    return eventoDetalle.precio || 0
+  }
+
+  /**
+   * Obtiene el rango de precios si hay múltiples secciones
+   */
+  const obtenerRangoPrecios = (): string | null => {
+    if (!eventoDetalle?.secciones || eventoDetalle.secciones.length === 0) {
+      return null
+    }
+
+    const precios = eventoDetalle.secciones.map((s) => s.precio)
+    const minPrecio = Math.min(...precios)
+    const maxPrecio = Math.max(...precios)
+
+    if (minPrecio === maxPrecio) {
+      return null // Todos los precios son iguales, no mostrar rango
+    }
+
+    return `$${minPrecio} - $${maxPrecio}`
+  }
 
   if (loadingEvento) {
     return (
@@ -76,13 +131,16 @@ export default function DetalleEventoPage() {
         cantidad,
       })
 
+      // Obtener el precio según la sección seleccionada
+      const precioUnitario = obtenerPrecioActual()
+
       // Paso 2: Generar tickets para la reserva
       const ticketsResult = await generarTickets({
         eventoId: eventoDetalle.id,
         reservaId: reserva.id,
         asistenteId: usuario.id,
         cantidad,
-        precioUnitario: eventoDetalle.precio,
+        precioUnitario: precioUnitario,
       })
 
       // Paso 3: Crear pago
@@ -206,7 +264,14 @@ export default function DetalleEventoPage() {
             <div className="bg-white p-6 rounded-lg border border-border-light sticky top-24">
               <div className="mb-6">
                 <p className="text-text-tertiary text-sm">Precio por entrada</p>
-                <p className="text-3xl font-bold text-primary">${eventoDetalle.precio}</p>
+                {obtenerRangoPrecios() ? (
+                  <div>
+                    <p className="text-2xl font-bold text-primary">{obtenerRangoPrecios()}</p>
+                    <p className="text-xs text-text-tertiary mt-1">Según sección seleccionada</p>
+                  </div>
+                ) : (
+                  <p className="text-3xl font-bold text-primary">${obtenerPrecioActual()}</p>
+                )}
               </div>
 
               {error && (
@@ -227,17 +292,30 @@ export default function DetalleEventoPage() {
                     <input
                       type="number"
                       min="1"
-                      max={eventoDetalle.aforoDisponible}
                       value={cantidad}
                       onChange={(e) => setCantidad(Math.max(1, Number.parseInt(e.target.value) || 1))}
                       className="w-full px-3 py-2 border border-border rounded-md"
+                      placeholder="Ingresa la cantidad"
                     />
+                    {eventoDetalle.aforoDisponible > 0 && (
+                      <p className="text-xs text-text-tertiary mt-1">
+                        Disponibles: {eventoDetalle.aforoDisponible} lugares
+                      </p>
+                    )}
                   </FormField>
 
                   <div className="bg-bg-secondary p-3 rounded-md mb-6">
                     <div className="flex justify-between text-sm mb-2">
+                      <span className="text-text-secondary">Precio unitario</span>
+                      <span className="font-semibold">${obtenerPrecioActual()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-text-secondary">Cantidad</span>
+                      <span className="font-semibold">{cantidad}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-2">
                       <span className="text-text-secondary">Subtotal</span>
-                      <span className="font-semibold">${eventoDetalle.precio * cantidad}</span>
+                      <span className="font-semibold">${obtenerPrecioActual() * cantidad}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-text-secondary">Comisión</span>
@@ -245,7 +323,7 @@ export default function DetalleEventoPage() {
                     </div>
                     <div className="border-t border-border mt-2 pt-2 flex justify-between">
                       <span className="font-semibold text-text-primary">Total</span>
-                      <span className="font-bold text-lg text-primary">${eventoDetalle.precio * cantidad}</span>
+                      <span className="font-bold text-lg text-primary">${obtenerPrecioActual() * cantidad}</span>
                     </div>
                   </div>
 
@@ -262,8 +340,8 @@ export default function DetalleEventoPage() {
                 </>
               ) : (
                 <Alert type="warning">
-                  {eventoDetalle.aforoDisponible === 0
-                    ? "Evento agotado"
+                  {eventoDetalle.estado !== EstadoEvento.PUBLICADO
+                    ? `Este evento no está disponible para reservas. Estado: ${eventoDetalle.estado}`
                     : "Este evento no está disponible para reservas"}
                 </Alert>
               )}

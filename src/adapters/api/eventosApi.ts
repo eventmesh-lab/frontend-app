@@ -277,10 +277,19 @@ class EventosApiAdapter {
    */
   async pagarPublicacion(eventoId: string, data: PagarPublicacionDTO): Promise<void> {
     try {
-      await this.client.post(`/api/eventos/${eventoId}/pagar-publicacion`, data)
-      console.log("[v0] Pago de publicación iniciado para evento:", eventoId)
+      // Mapear a PascalCase para el backend C#
+      const payload = {
+        TransaccionPagoId: data.transaccionPagoId,
+        Monto: data.monto,
+      }
+      
+      console.log("[EventosApi] Pagando publicación:", eventoId, "payload:", payload)
+      
+      await this.client.post(`/api/eventos/${eventoId}/pagar-publicacion`, payload)
+      console.log("[EventosApi] Pago de publicación iniciado exitosamente para evento:", eventoId)
     } catch (error: any) {
-      console.error("[v0] Error pagando publicación:", error)
+      console.error("[EventosApi] Error pagando publicación:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
       throw new Error(error.response?.data?.message || "Error al pagar la publicación del evento")
     }
   }

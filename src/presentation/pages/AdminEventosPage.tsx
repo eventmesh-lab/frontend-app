@@ -45,7 +45,8 @@ export default function AdminEventosPage() {
   }, [])
 
   /**
-   * Publica un evento que está en estado Borrador
+   * Publica un evento que está pagado (tiene transaccionPagoId)
+   * Permite publicar eventos en estado Borrador o PendientePago si están pagados
    */
   const handlePublicar = async (eventoId: string) => {
     const evento = eventos.find((e) => e.id === eventoId)
@@ -57,6 +58,12 @@ export default function AdminEventosPage() {
 
     if (!evento.transaccionPagoId) {
       setError("El evento debe estar pagado antes de publicarse")
+      return
+    }
+
+    // Verificar que el evento no esté ya publicado
+    if (evento.estado === EstadoEvento.PUBLICADO) {
+      setError("El evento ya está publicado")
       return
     }
 
@@ -252,8 +259,8 @@ export default function AdminEventosPage() {
                       )}
                     </div>
 
-                    {/* Botón de publicar - solo si está en borrador Y pagado */}
-                    {evento.estado === EstadoEvento.BORRADOR && evento.transaccionPagoId ? (
+                    {/* Botón de publicar - si está pagado y no está ya publicado */}
+                    {evento.transaccionPagoId && evento.estado !== EstadoEvento.PUBLICADO ? (
                       <Button
                         variant="primary"
                         size="sm"
@@ -265,7 +272,7 @@ export default function AdminEventosPage() {
                         <CheckCircle className="w-4 h-4 mr-2" />
                         {publicandoId === evento.id ? "Publicando..." : "Publicar Evento"}
                       </Button>
-                    ) : evento.estado === EstadoEvento.BORRADOR && !evento.transaccionPagoId ? (
+                    ) : !evento.transaccionPagoId && (evento.estado === EstadoEvento.BORRADOR || evento.estado === EstadoEvento.PENDIENTE_PAGO) ? (
                       <div className="text-xs text-text-tertiary bg-bg-secondary px-3 py-2 rounded text-center">
                         <AlertCircle className="w-4 h-4 mx-auto mb-1 text-warning" />
                         <p>Requiere pago</p>
