@@ -141,13 +141,13 @@ class EventosApiAdapter {
       // El PagoConfirmadoId es requerido por el validador
       // Si no se proporciona, generamos un GUID temporal (el backend debería validar si existe)
       const pagoId = pagoConfirmadoId || this.generarGuidTemporal()
-      
+
       const payload = {
         PagoConfirmadoId: pagoId,
       }
-      
+
       console.log("[EventosApi] Publicando evento:", id, "con pagoId:", pagoId)
-      
+
       await this.client.post(`/api/eventos/${id}/publicar`, payload)
       console.log("[EventosApi] Evento publicado exitosamente:", id)
     } catch (error: any) {
@@ -163,7 +163,7 @@ class EventosApiAdapter {
    */
   private generarGuidTemporal(): string {
     // Generar un GUID v4 válido
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       const r = Math.random() * 16 | 0
       const v = c === 'x' ? r : (r & 0x3 | 0x8)
       return v.toString(16)
@@ -237,41 +237,41 @@ class EventosApiAdapter {
 
       const response = await this.client.post("/api/eventos", payload)
       console.log("[EventosApi] Respuesta del backend:", response.data)
-      
+
       // El backend devuelve CrearEventoCommandResponse que solo tiene { Id: guid }
       // Necesitamos obtener el evento completo después de crearlo
       const eventoId = response.data?.Id || response.data?.id
-      
+
       if (!eventoId) {
         throw new Error("La respuesta del servidor no contiene el ID del evento creado")
       }
-      
+
       console.log("[EventosApi] Evento creado con ID:", eventoId)
-      
+
       // Obtener el evento completo desde el backend
       // Esperar un momento para que el backend procese la creación
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       const eventoCompleto = await this.obtenerDetalle(eventoId)
-      
+
       if (!eventoCompleto) {
         throw new Error("Evento creado pero no se pudo obtener la información completa")
       }
-      
+
       return eventoCompleto
     } catch (error: any) {
       console.error("[EventosApi] Error creando evento con secciones:", error)
       console.error("[EventosApi] Error response:", error.response?.data)
       console.error("[EventosApi] Error status:", error.response?.status)
-      
+
       // Extraer mensaje de error más detallado
-      const errorMessage = 
-        error.response?.data?.message || 
+      const errorMessage =
+        error.response?.data?.message ||
         error.response?.data?.title ||
         error.response?.data?.errors?.join?.(", ") ||
         error.message ||
         "Error al crear el evento"
-      
+
       throw new Error(errorMessage)
     }
   }
@@ -287,9 +287,9 @@ class EventosApiAdapter {
         TransaccionPagoId: data.transaccionPagoId,
         Monto: data.monto,
       }
-      
+
       console.log("[EventosApi] Pagando publicación:", eventoId, "payload:", payload)
-      
+
       await this.client.post(`/api/eventos/${eventoId}/pagar-publicacion`, payload)
       console.log("[EventosApi] Pago de publicación iniciado exitosamente para evento:", eventoId)
     } catch (error: any) {
@@ -324,6 +324,40 @@ class EventosApiAdapter {
     } catch (error: any) {
       console.error("[v0] Error finalizando evento:", error)
       throw new Error(error.response?.data?.message || "Error al finalizar el evento")
+    }
+  }
+
+  /**
+   * Sube imágenes a un evento
+   * @param eventoId ID del evento
+   * @param archivos Array de archivos File a subir
+   * @returns URLs de las imágenes subidas
+   */
+  async subirImagenes(eventoId: string, archivos: File[]): Promise<string[]> {
+    try {
+      const formData = new FormData()
+
+      // Agregar cada archivo al FormData
+      archivos.forEach((archivo) => {
+        formData.append('files', archivo)
+      })
+
+      console.log("[EventosApi] Subiendo", archivos.length, "imagen(es) para evento:", eventoId)
+
+      const response = await this.client.post(`/api/Eventos/${eventoId}/media`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      console.log("[EventosApi] Imágenes subidas exitosamente:", response.data)
+
+      // El backend debería devolver las URLs de las imágenes subidas
+      return Array.isArray(response.data) ? response.data : [response.data]
+    } catch (error: any) {
+      console.error("[EventosApi] Error subiendo imágenes:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
+      throw new Error(error.response?.data?.message || "Error al subir las imágenes")
     }
   }
 }

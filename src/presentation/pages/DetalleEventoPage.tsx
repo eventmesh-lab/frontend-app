@@ -195,159 +195,177 @@ export default function DetalleEventoPage() {
         <span className="text-text-tertiary">/</span>
         <span className="text-text-primary font-medium">{eventoDetalle.nombre}</span>
       </nav>
-      
+
       {/* Galería */}
-      <div className="mb-8 rounded-lg overflow-hidden">
-        <img
-          src={eventoDetalle.imagen || "/placeholder.svg?height=400&width=800&query=evento"}
-          alt={eventoDetalle.nombre}
-          className="w-full h-96 object-cover"
-        />
+      <div className="mb-8">
+        {/* Imagen Principal */}
+        <div className="rounded-lg overflow-hidden mb-4">
+          <img
+            src={eventoDetalle.imagen || "/placeholder.svg?height=400&width=800&query=evento"}
+            alt={eventoDetalle.nombre}
+            className="w-full h-96 object-cover"
+          />
+        </div>
+
+        {/* Imágenes Secundarias */}
+        {eventoDetalle.imagenesSecundarias && eventoDetalle.imagenesSecundarias.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {eventoDetalle.imagenesSecundarias.map((url, index) => (
+              <div key={index} className="rounded-lg overflow-hidden">
+                <img
+                  src={url}
+                  alt={`${eventoDetalle.nombre} - ${index + 1}`}
+                  className="w-full h-32 object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Información Principal */}
-          <div className="md:col-span-2">
-            <h1 className="text-4xl font-bold text-text-primary mb-4">{eventoDetalle.nombre}</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Información Principal */}
+        <div className="md:col-span-2">
+          <h1 className="text-4xl font-bold text-text-primary mb-4">{eventoDetalle.nombre}</h1>
 
-            <div className="flex gap-4 mb-6">
-              <div className="flex items-center gap-2 text-text-secondary">
-                <span>📅</span>
-                {new Date(eventoDetalle.fecha).toLocaleDateString("es-ES", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-              <div className="flex items-center gap-2 text-text-secondary">
-                <span>📍</span>
-                {eventoDetalle.venue}
-              </div>
+          <div className="flex gap-4 mb-6">
+            <div className="flex items-center gap-2 text-text-secondary">
+              <span>📅</span>
+              {new Date(eventoDetalle.fecha).toLocaleDateString("es-ES", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </div>
-
-            <div className="prose prose-sm max-w-none mb-8">
-              <h2 className="text-2xl font-semibold text-text-primary mb-3">Descripción</h2>
-              <p className="text-text-secondary leading-relaxed">{eventoDetalle.descripcion}</p>
-            </div>
-
-            {/* Detalles */}
-            <div className="bg-bg-secondary p-6 rounded-lg mb-8">
-              <h3 className="font-semibold text-text-primary mb-4">Detalles del Evento</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-text-tertiary">Categoría</p>
-                  <p className="font-semibold text-text-primary">{eventoDetalle.categoria}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-text-tertiary">Estado</p>
-                  <p className="font-semibold text-text-primary capitalize">{eventoDetalle.estado}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-text-tertiary">Aforo Total</p>
-                  <p className="font-semibold text-text-primary">{eventoDetalle.aforo} personas</p>
-                </div>
-                <div>
-                  <p className="text-sm text-text-tertiary">Disponibles</p>
-                  <p className="font-semibold text-text-primary text-success">
-                    {eventoDetalle.aforoDisponible} lugares
-                  </p>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 text-text-secondary">
+              <span>📍</span>
+              {eventoDetalle.venue}
             </div>
           </div>
 
-          {/* Reserva */}
-          <div className="md:col-span-1">
-            <div className="bg-white p-6 rounded-lg border border-border-light sticky top-24">
-              <div className="mb-6">
-                <p className="text-text-tertiary text-sm">Precio por entrada</p>
-                {obtenerRangoPrecios() ? (
-                  <div>
-                    <p className="text-2xl font-bold text-primary">{obtenerRangoPrecios()}</p>
-                    <p className="text-xs text-text-tertiary mt-1">Según sección seleccionada</p>
-                  </div>
-                ) : (
-                  <p className="text-3xl font-bold text-primary">${obtenerPrecioActual()}</p>
-                )}
+          <div className="prose prose-sm max-w-none mb-8">
+            <h2 className="text-2xl font-semibold text-text-primary mb-3">Descripción</h2>
+            <p className="text-text-secondary leading-relaxed">{eventoDetalle.descripcion}</p>
+          </div>
+
+          {/* Detalles */}
+          <div className="bg-bg-secondary p-6 rounded-lg mb-8">
+            <h3 className="font-semibold text-text-primary mb-4">Detalles del Evento</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-text-tertiary">Categoría</p>
+                <p className="font-semibold text-text-primary">{eventoDetalle.categoria}</p>
               </div>
-
-              {error && (
-                <Alert type="error" onClose={() => setError(null)}>
-                  {error}
-                </Alert>
-              )}
-
-              {success && (
-                <Alert type="success" onClose={() => setSuccess(null)}>
-                  {success}
-                </Alert>
-              )}
-
-              {eventoDetalle.puedeReservar() ? (
-                <>
-                  <FormField label="Cantidad de entradas" required>
-                    <input
-                      type="number"
-                      min="1"
-                      value={cantidad}
-                      onChange={(e) => setCantidad(Math.max(1, Number.parseInt(e.target.value) || 1))}
-                      className="w-full px-3 py-2 border border-border rounded-md"
-                      placeholder="Ingresa la cantidad"
-                    />
-                    {eventoDetalle.aforoDisponible > 0 && (
-                      <p className="text-xs text-text-tertiary mt-1">
-                        Disponibles: {eventoDetalle.aforoDisponible} lugares
-                      </p>
-                    )}
-                  </FormField>
-
-                  <div className="bg-bg-secondary p-3 rounded-md mb-6">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-text-secondary">Precio unitario</span>
-                      <span className="font-semibold">${obtenerPrecioActual()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-text-secondary">Cantidad</span>
-                      <span className="font-semibold">{cantidad}</span>
-                    </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-text-secondary">Subtotal</span>
-                      <span className="font-semibold">${obtenerPrecioActual() * cantidad}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-text-secondary">Comisión</span>
-                      <span className="font-semibold">$0</span>
-                    </div>
-                    <div className="border-t border-border mt-2 pt-2 flex justify-between">
-                      <span className="font-semibold text-text-primary">Total</span>
-                      <span className="font-bold text-lg text-primary">${obtenerPrecioActual() * cantidad}</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleReservar}
-                    disabled={loadingReserva || loadingPago || loadingTickets}
-                    loading={loadingReserva || loadingPago || loadingTickets}
-                    className="w-full"
-                  >
-                    Reservar Ahora
-                  </Button>
-
-                  <p className="text-xs text-text-tertiary text-center mt-3">La reserva vence en 15 minutos</p>
-                </>
-              ) : (
-                <Alert type="warning">
-                  {eventoDetalle.estado !== EstadoEvento.PUBLICADO
-                    ? `Este evento no está disponible para reservas. Estado: ${eventoDetalle.estado}`
-                    : "Este evento no está disponible para reservas"}
-                </Alert>
-              )}
+              <div>
+                <p className="text-sm text-text-tertiary">Estado</p>
+                <p className="font-semibold text-text-primary capitalize">{eventoDetalle.estado}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-tertiary">Aforo Total</p>
+                <p className="font-semibold text-text-primary">{eventoDetalle.aforo} personas</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-tertiary">Disponibles</p>
+                <p className="font-semibold text-text-primary text-success">
+                  {eventoDetalle.aforoDisponible} lugares
+                </p>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Reserva */}
+        <div className="md:col-span-1">
+          <div className="bg-white p-6 rounded-lg border border-border-light sticky top-24">
+            <div className="mb-6">
+              <p className="text-text-tertiary text-sm">Precio por entrada</p>
+              {obtenerRangoPrecios() ? (
+                <div>
+                  <p className="text-2xl font-bold text-primary">{obtenerRangoPrecios()}</p>
+                  <p className="text-xs text-text-tertiary mt-1">Según sección seleccionada</p>
+                </div>
+              ) : (
+                <p className="text-3xl font-bold text-primary">${obtenerPrecioActual()}</p>
+              )}
+            </div>
+
+            {error && (
+              <Alert type="error" onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
+            {success && (
+              <Alert type="success" onClose={() => setSuccess(null)}>
+                {success}
+              </Alert>
+            )}
+
+            {eventoDetalle.puedeReservar() ? (
+              <>
+                <FormField label="Cantidad de entradas" required>
+                  <input
+                    type="number"
+                    min="1"
+                    value={cantidad}
+                    onChange={(e) => setCantidad(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                    className="w-full px-3 py-2 border border-border rounded-md"
+                    placeholder="Ingresa la cantidad"
+                  />
+                  {eventoDetalle.aforoDisponible > 0 && (
+                    <p className="text-xs text-text-tertiary mt-1">
+                      Disponibles: {eventoDetalle.aforoDisponible} lugares
+                    </p>
+                  )}
+                </FormField>
+
+                <div className="bg-bg-secondary p-3 rounded-md mb-6">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-text-secondary">Precio unitario</span>
+                    <span className="font-semibold">${obtenerPrecioActual()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-text-secondary">Cantidad</span>
+                    <span className="font-semibold">{cantidad}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-text-secondary">Subtotal</span>
+                    <span className="font-semibold">${obtenerPrecioActual() * cantidad}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">Comisión</span>
+                    <span className="font-semibold">$0</span>
+                  </div>
+                  <div className="border-t border-border mt-2 pt-2 flex justify-between">
+                    <span className="font-semibold text-text-primary">Total</span>
+                    <span className="font-bold text-lg text-primary">${obtenerPrecioActual() * cantidad}</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleReservar}
+                  disabled={loadingReserva || loadingPago || loadingTickets}
+                  loading={loadingReserva || loadingPago || loadingTickets}
+                  className="w-full"
+                >
+                  Reservar Ahora
+                </Button>
+
+                <p className="text-xs text-text-tertiary text-center mt-3">La reserva vence en 15 minutos</p>
+              </>
+            ) : (
+              <Alert type="warning">
+                {eventoDetalle.estado !== EstadoEvento.PUBLICADO
+                  ? `Este evento no está disponible para reservas. Estado: ${eventoDetalle.estado}`
+                  : "Este evento no está disponible para reservas"}
+              </Alert>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
