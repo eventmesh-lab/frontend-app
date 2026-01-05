@@ -27,6 +27,7 @@ export interface PagarPublicacionDTO {
 
 /**
  * Mapea un evento desde la API (con fechas como strings) a EventoEntity
+ * La API ahora devuelve URLs completas de blobs en imagenPrincipalBlob, imagenesSecundariasBlobs y folletoBlob
  */
 function mapEventoFromApi(data: any): EventoEntity {
   return new EventoEntity({
@@ -47,7 +48,11 @@ function mapEventoFromApi(data: any): EventoEntity {
     tarifaPublicacion: data.tarifaPublicacion,
     transaccionPagoId: data.transaccionPagoId,
     secciones: data.secciones,
-    imagen: data.imagen,
+    // Mapear imagenPrincipalBlob a imagen (mantener compatibilidad con API antigua)
+    imagen: data.imagenPrincipalBlob || data.imagen,
+    // Campos opcionales para uso futuro
+    imagenesSecundarias: data.imagenesSecundariasBlobs || undefined,
+    folletoUrl: data.folletoBlob || undefined,
     fechaCreacion: new Date(data.fechaCreacion || new Date()),
     fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
   })

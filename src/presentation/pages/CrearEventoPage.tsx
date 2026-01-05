@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import useAuth from "../contexts/Auth"
+import { useNotifications } from "../contexts/NotificationContext"
+import { NotificationEventType } from "../../adapters/signalr/notificationHub"
 import { useEventos, type CrearEventoConSeccionesDTO } from "../hooks/useEventos"
 import { getUserIdFromEmail } from "../../utils/userIdHelper"
 import { venuesService } from "../../application/services/venuesService"
@@ -91,6 +93,7 @@ export default function CrearEventoPage() {
   const navigate = useNavigate()
   const { username, isAuthenticated } = useAuth() // username = email del usuario
   const { crearEventoConSecciones, isLoading, error } = useEventos()
+  const { agregarNotificacion } = useNotifications()
 
   // Estado de venues
   const [venues, setVenues] = useState<Venue[]>([])
@@ -299,12 +302,22 @@ export default function CrearEventoPage() {
       const eventoCreado = await crearEventoConSecciones(datos)
       console.log("[CrearEvento] Evento creado exitosamente:", eventoCreado)
       
+      // Mostrar mensaje de éxito
       setSubmitSuccess(true)
+      setSubmitError(null)
       
-      // Redirigir al dashboard después de 2 segundos
+      // Agregar notificación de éxito
+      agregarNotificacion(
+        NotificationEventType.SISTEMA,
+        "Evento creado exitosamente",
+        `El evento "${eventoCreado.nombre}" ha sido creado correctamente. Está en estado Borrador y listo para publicar.`,
+        { eventoId: eventoCreado.id, eventoNombre: eventoCreado.nombre }
+      )
+      
+      // Redirigir al dashboard después de 3 segundos (dar tiempo para ver el mensaje)
       setTimeout(() => {
         navigate("/organizador")
-      }, 2000)
+      }, 3000)
     } catch (err) {
       console.error("[CrearEvento] Error al crear evento:", err)
       
@@ -320,6 +333,15 @@ export default function CrearEventoPage() {
       
       setSubmitError(errorMessage)
       setSubmitSuccess(false)
+      
+      // Agregar notificación de error
+      agregarNotificacion(
+        NotificationEventType.SISTEMA,
+        "Error al crear evento",
+        errorMessage,
+        { error: errorMessage }
+      )
+      
       // No redirigir si hay error, dejar que el usuario vea el mensaje
     }
   }
@@ -335,14 +357,33 @@ export default function CrearEventoPage() {
         </div>
 
         {submitSuccess && (
-          <Alert type="success" className="mb-6">
-            ¡Evento creado exitosamente! Redirigiendo al dashboard...
+          <Alert 
+            type="success" 
+            title="¡Éxito!" 
+            className="mb-6"
+            onClose={() => setSubmitSuccess(false)}
+          >
+            <div>
+              <p className="font-semibold mb-2">¡Evento creado exitosamente!</p>
+              <p className="text-sm">El evento ha sido guardado en estado Borrador. Serás redirigido al dashboard en unos segundos...</p>
+            </div>
           </Alert>
         )}
 
         {(submitError || error) && (
-          <Alert type="error" className="mb-6">
-            {submitError || error}
+          <Alert 
+            type="error" 
+            title="Error al crear evento" 
+            className="mb-6"
+            onClose={() => {
+              setSubmitError(null)
+            }}
+          >
+            <div>
+              <p className="font-semibold mb-1">No se pudo crear el evento:</p>
+              <p className="text-sm">{submitError || error}</p>
+              <p className="text-xs mt-2 opacity-75">Por favor, revisa la información e intenta nuevamente.</p>
+            </div>
           </Alert>
         )}
 
@@ -574,7 +615,7 @@ export default function CrearEventoPage() {
                 size="lg" 
                 loading={isLoading} 
                 disabled={isLoading}
-                className="min-w-[180px] font-bold"
+                className="min-w-[180px] font-bold !bg-[#141414]"
               >
                 {isLoading ? "Creando Evento..." : "✨ Crear Evento"}
               </Button>

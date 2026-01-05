@@ -30,7 +30,7 @@ export default function Alert({ type, title, children, onClose, className = "" }
       <span className="text-lg flex-shrink-0 font-bold">{iconMap[type]}</span>
       <div className="flex-grow">
         {title && <h4 className="font-semibold mb-1">{title}</h4>}
-        <p className="text-sm">{children}</p>
+        <div className="text-sm">{children}</div>
       </div>
       {onClose && (
         <button onClick={onClose} className="text-lg font-bold opacity-50 hover:opacity-75">

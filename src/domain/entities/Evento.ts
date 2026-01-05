@@ -42,6 +42,8 @@ export interface Evento {
   transaccionPagoId?: string
   secciones?: SeccionEvento[]
   imagen?: string
+  imagenesSecundarias?: string[] // URLs completas de imágenes secundarias del blob storage
+  folletoUrl?: string // URL completa del folleto PDF en blob storage
   fechaCreacion: Date
   fechaActualizacion: Date
 }
@@ -65,6 +67,8 @@ export class EventoEntity implements Evento {
   transaccionPagoId?: string
   secciones?: SeccionEvento[]
   imagen?: string
+  imagenesSecundarias?: string[] // URLs completas de imágenes secundarias del blob storage
+  folletoUrl?: string // URL completa del folleto PDF en blob storage
   fechaCreacion: Date
   fechaActualizacion: Date
 
@@ -87,6 +91,8 @@ export class EventoEntity implements Evento {
     this.transaccionPagoId = data.transaccionPagoId
     this.secciones = data.secciones
     this.imagen = data.imagen
+    this.imagenesSecundarias = data.imagenesSecundarias
+    this.folletoUrl = data.folletoUrl
     this.fechaCreacion = data.fechaCreacion
     this.fechaActualizacion = data.fechaActualizacion
   }
