@@ -44,6 +44,7 @@ interface UseEventosReturn {
   obtenerMisEventos: (organizadorId: string) => Promise<void>
   editarEvento: (eventoId: string, datos: EditarEventoDTO) => Promise<void>
   cancelarEvento: (eventoId: string) => Promise<void>
+  subirImagenes: (eventoId: string, archivos: File[]) => Promise<string[]>
   limpiar: () => void
 }
 
@@ -223,6 +224,20 @@ export function useEventos(): UseEventosReturn {
     setError(null)
   }, [])
 
+  const subirImagenes = useCallback(async (eventoId: string, archivos: File[]): Promise<string[]> => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const urls = await eventosApi.subirImagenes(eventoId, archivos)
+      return urls
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error subiendo imágenes")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     eventos,
     eventoDetalle,
@@ -239,6 +254,7 @@ export function useEventos(): UseEventosReturn {
     obtenerMisEventos,
     editarEvento,
     cancelarEvento,
+    subirImagenes,
     limpiar,
   }
 }
