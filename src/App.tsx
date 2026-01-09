@@ -23,6 +23,7 @@ import UserDetailPage from "./presentation/pages/UserDetailPage"
 import UserByAdminPage from "./presentation/pages/UserByAdminPage"
 import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
 import UpdateUserPage from "./presentation/pages/UpdateUserPage"
+import PagoPage from "./presentation/pages/PagoPage"
 
 function App() {
     return (
@@ -70,6 +71,16 @@ function App() {
                                 <PrivateRoute>
                                     <MainLayout>
                                         <MisReservasPage />
+                                    </MainLayout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/pago"
+                            element={
+                                <PrivateRoute>
+                                    <MainLayout>
+                                        <PagoPage />
                                     </MainLayout>
                                 </PrivateRoute>
                             }

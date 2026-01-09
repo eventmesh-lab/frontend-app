@@ -59,7 +59,7 @@ export default function LoginPage() {
             );
            
             login(response.data.access_token, response.data.refresh_token);
-            navigate('/');
+            navigate(from || '/');
         } catch (err: any) {
             let errorMessage = "Error en login";
 

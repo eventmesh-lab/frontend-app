@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useAuth } from "../contexts/AuthContext"
+import useAuth from "../contexts/Auth"
 import { useNotifications } from "../contexts/NotificationContext"
 import { useSignalR } from "../hooks/useSignalR"
 import { useEventos } from "../hooks/useEventos"
@@ -8,6 +8,7 @@ import { useReservas } from "../hooks/useReservas"
 import { usePagos } from "../hooks/usePagos"
 import { useTickets } from "../hooks/useTickets"
 import { EstadoEvento } from "../../domain/entities/Evento"
+import { crearReservaTemporalUseCase } from "../../application/useCases/reservas/CrearReservaTemporal"
 import Button from "../components/ui/Button"
 import LoadingSpinner from "../components/ui/LoadingSpinner"
 import Alert from "../components/ui/Alert"
@@ -17,7 +18,8 @@ import Breadcrumb from "../components/common/Breadcrumb"
 export default function DetalleEventoPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { usuario } = useAuth()
+  // Usar el contexto Auth.tsx que es el sistema real de autenticación
+  const { isAuthenticated, username, accessToken } = useAuth()
   const { notificarReservaConfirmada } = useSignalR()
   const { agregarNotificacion } = useNotifications()
 
@@ -115,8 +117,9 @@ export default function DetalleEventoPage() {
   }
 
   const handleReservar = async () => {
-    if (!usuario) {
-      navigate("/login")
+    if (!isAuthenticated || !username) {
+      // Redirigir al login con el estado de retorno para volver después del login
+      navigate("/login", { state: { from: { pathname: `/eventos/${id}` } } })
       return
     }
 
@@ -124,62 +127,21 @@ export default function DetalleEventoPage() {
       setError(null)
       setSuccess(null)
 
-      // Paso 1: Crear reserva
-      const reserva = await crearReserva({
-        asistenteId: usuario.id,
+      // Crear reserva temporal según la guía de API
+      // Esto crea una reserva temporal que expira en 10 minutos (según la guía)
+      const reservaTemporal = await crearReservaTemporalUseCase.ejecutar({
+        asistenteId: username,
         eventoId: eventoDetalle.id,
         cantidad,
+        seccionId: seccionSeleccionada || undefined,
+        tipoTicket: "General",
+        moneda: "USD",
       })
 
-      // Obtener el precio según la sección seleccionada
-      const precioUnitario = obtenerPrecioActual()
-
-      // Paso 2: Generar tickets para la reserva
-      const ticketsResult = await generarTickets({
-        eventoId: eventoDetalle.id,
-        reservaId: reserva.id,
-        asistenteId: usuario.id,
-        cantidad,
-        precioUnitario: precioUnitario,
-      })
-
-      // Paso 3: Crear pago
-      const pago = await crearPago({
-        usuarioId: usuario.id,
-        reservaId: reserva.id,
-        monto: reserva.montoTotal,
-        concepto: `Entrada para ${eventoDetalle.nombre}`,
-        metodo: "tarjeta",
-      })
-
-      // Paso 4: Procesar pago
-      await procesarPago(pago.id)
-
-      // Paso 5: Confirmar tickets después del pago exitoso
-      if (ticketsResult.ticketIds && ticketsResult.ticketIds.length > 0) {
-        await confirmarTickets({
-          pagoId: pago.id,
-          ticketIds: ticketsResult.ticketIds,
-        })
-      }
-
-      // Notificar
-      notificarReservaConfirmada(eventoDetalle.nombre, cantidad, reserva.montoTotal)
-      agregarNotificacion({
-        tipo: "success",
-        titulo: "Reserva confirmada",
-        mensaje: `${cantidad} ticket(s) generado(s) y confirmado(s) para ${eventoDetalle.nombre}`,
-      })
-      setSuccess(
-        `Reserva confirmada. ${cantidad} entrada(s) por $${reserva.montoTotal}. Código: ${reserva.codigoReserva}`,
-      )
-
-      // Redirigir después de 2 segundos
-      setTimeout(() => {
-        navigate("/mis-reservas")
-      }, 2000)
+      // Redirigir a la página de pago con los parámetros necesarios
+      navigate(`/pago?reservaId=${reservaTemporal.reservaId}&eventoId=${eventoDetalle.id}&monto=${reservaTemporal.montoTotal}&eventoNombre=${encodeURIComponent(eventoDetalle.nombre)}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear la reserva y generar tickets")
+      setError(err instanceof Error ? err.message : "Error al crear la reserva temporal")
     }
   }
 
@@ -306,6 +268,20 @@ export default function DetalleEventoPage() {
 
             {eventoDetalle.puedeReservar() ? (
               <>
+                {!isAuthenticated && (
+                  <Alert type="info" className="mb-4">
+                    <p className="text-sm mb-2">Debes iniciar sesión para reservar entradas.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate("/login", { state: { from: `/eventos/${id}` } })}
+                      className="w-full"
+                    >
+                      Iniciar Sesión
+                    </Button>
+                  </Alert>
+                )}
+
                 <FormField label="Cantidad de entradas" required>
                   <input
                     type="number"
@@ -314,6 +290,7 @@ export default function DetalleEventoPage() {
                     onChange={(e) => setCantidad(Math.max(1, Number.parseInt(e.target.value) || 1))}
                     className="w-full px-3 py-2 border border-border rounded-md"
                     placeholder="Ingresa la cantidad"
+                    disabled={!isAuthenticated}
                   />
                   {eventoDetalle.aforoDisponible > 0 && (
                     <p className="text-xs text-text-tertiary mt-1">
@@ -347,11 +324,11 @@ export default function DetalleEventoPage() {
 
                 <Button
                   onClick={handleReservar}
-                  disabled={loadingReserva || loadingPago || loadingTickets}
+                  disabled={!isAuthenticated || loadingReserva || loadingPago || loadingTickets}
                   loading={loadingReserva || loadingPago || loadingTickets}
                   className="w-full"
                 >
-                  Reservar Ahora
+                  {!isAuthenticated ? "Inicia sesión para reservar" : "Reservar Ahora"}
                 </Button>
 
                 <p className="text-xs text-text-tertiary text-center mt-3">La reserva vence en 15 minutos</p>
