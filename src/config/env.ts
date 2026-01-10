@@ -51,13 +51,13 @@ export const keycloakConfig = {
   url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180',
   
   /** Realm de Keycloak */
-  realm: import.meta.env.VITE_KEYCLOAK_REALM || 'myrealm',
+  realm: 'myrealm',
   
   /** Client ID de la aplicación */
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'aspnetcore',
+  clientId:  'aspnetcore',
   
   /** Client Secret de la aplicación */
-  clientSecret: import.meta.env.VITE_KEYCLOAK_CLIENT_SECRET || '',
+  clientSecret: 'PzaioIxlVKVINnJ7VJwCILdBoUlUWB05',
   
   /** URL del endpoint de token */
   get tokenUrl() {

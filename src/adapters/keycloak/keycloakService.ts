@@ -158,7 +158,9 @@ class KeycloakService {
           given_name: decoded.given_name || "",
           family_name: decoded.family_name || "",
           roles: decoded.realm_access?.roles || [],
-        }
+          }
+          console.log(`Usando información del token decodificado como fallback ${JSON.stringify(userInfo)}`);
+
         this.storeUser(userInfo)
       } catch (e) {
         console.error("Error decodificando token:", e)

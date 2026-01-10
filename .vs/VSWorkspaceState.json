@@ -2,9 +2,10 @@
   "ExpandedNodes": [
     "",
     "\\src",
-    "\\src\\presentation",
-    "\\src\\presentation\\pages"
+    "\\src\\adapters",
+    "\\src\\adapters\\keycloak",
+    "\\src\\config",
+    "\\src\\presentation"
   ],
-  "SelectedNode": "\\src\\presentation\\pages\\RegistroPage.tsx",
   "PreviewInSolutionExplorer": false
 }

@@ -24,12 +24,20 @@ import UserByAdminPage from "./presentation/pages/UserByAdminPage"
 import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
 import UpdateUserPage from "./presentation/pages/UpdateUserPage"
 import PagoPage from "./presentation/pages/PagoPage"
+import React from 'react';
+import { Toaster } from 'react-hot-toast'; 
+import { useSignalR } from './presentation/hooks/useSignalR'; 
 
+const SignalRHandler = () => {
+    useSignalR(); // Conecta a SignalR
+    return <Toaster position="top-right" />; // Muestra las burbujas
+};
 function App() {
     return (
         <Router>
             <AuthProvider>
                 <NotificationProvider>
+                    <SignalRHandler />
                     <Routes>
                         {/* Rutas públicas */}
                         <Route path="/login" element={<LoginPage />} />
@@ -76,13 +84,11 @@ function App() {
                             }
                         />
                         <Route
-                            path="/pago"
+                            path="/pago/:idReserva/:monto"
                             element={
-                                <PrivateRoute>
                                     <MainLayout>
                                         <PagoPage />
                                     </MainLayout>
-                                </PrivateRoute>
                             }
                         />
 
