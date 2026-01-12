@@ -1,130 +1,72 @@
-"use client"
+import { useEffect, useState } from 'react';
+import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import useAuth from "../contexts/Auth"; // Ajusta la ruta si es distinta
+import toast from 'react-hot-toast';
 
-import { useCallback } from "react"
-import { NotificationEventType } from "../../adapters/signalr/notificationHub"
-import { useNotifications } from "../contexts/NotificationContext"
-import { useAuth } from "../contexts/AuthContext"
+export const useSignalR = () => {
+    const { isAuthenticated, username } = useAuth();
+    const [connection, setConnection] = useState<HubConnection | null>(null);
 
-/**
- * Hook para usar funcionalidad de SignalR
- * Facilita el envío de notificaciones en tiempo real desde componentes
- */
-export function useSignalR() {
-  const { usuario } = useAuth()
-  const { agregarNotificacion } = useNotifications()
+    useEffect(() => {
+        // 1. Guardián: Si no hay usuario, no hacemos nada todavía
+        if (!isAuthenticated || !username) {
+            return;
+        }
 
-  const notificarReservaConfirmada = useCallback(
-    (eventoNombre: string, cantidad: number, monto: number) => {
-      if (usuario) {
-        agregarNotificacion(
-          NotificationEventType.RESERVA_CONFIRMADA,
-          "Reserva Confirmada",
-          `Tu reserva para ${eventoNombre} ha sido confirmada. ${cantidad} entradas por $${monto}`,
-          { eventoNombre, cantidad, monto },
-        )
-      }
-    },
-    [usuario, agregarNotificacion],
-  )
+        console.log(`🔌 Iniciando configuración SignalR para: ${username}`);
 
-  const notificarPagoCompletado = useCallback(
-    (monto: number, concepto: string) => {
-      if (usuario) {
-        agregarNotificacion(
-          NotificationEventType.PAGO_COMPLETADO,
-          "Pago Completado",
-          `Tu pago de $${monto} por ${concepto} ha sido procesado exitosamente`,
-          { monto, concepto },
-        )
-      }
-    },
-    [usuario, agregarNotificacion],
-  )
+        // 2. Construir la conexión
+        const newConnection = new HubConnectionBuilder()
+            .withUrl("http://localhost:7184/hubs/notifications") // Asegúrate que este puerto sea el de tu launchSettings.json (http)
+            .withAutomaticReconnect() // Reintenta si se cae internet
+            .configureLogging(LogLevel.Information)
+            .build();
 
-<<<<<<< Updated upstream
-  const notificarPagoFallido = useCallback(
-    (monto: number, razon: string) => {
-      if (usuario) {
-        agregarNotificacion(
-          NotificationEventType.PAGO_FALLIDO,
-          "Pago Fallido",
-          `Tu pago de $${monto} no pudo ser procesado. Razón: ${razon}. Por favor, intenta nuevamente.`,
-          { monto, razon },
-        )
-      }
-    },
-    [usuario, agregarNotificacion],
-  )
+        // 3. Configurar los "Oídos" (Listeners)
 
-  const notificarEventoPublicado = useCallback(
-    (eventoNombre: string) => {
-      if (usuario) {
-        agregarNotificacion(
-          NotificationEventType.EVENTO_PUBLICADO,
-          "Evento Publicado",
-          `Tu evento "${eventoNombre}" ha sido publicado exitosamente`,
-          { eventoNombre },
-        )
-      }
-    },
-    [usuario, agregarNotificacion],
-  )
-
-  const notificarEventoCancelado = useCallback(
-    (eventoNombre: string) => {
-      if (usuario) {
-        agregarNotificacion(
-          NotificationEventType.EVENTO_CANCELADO,
-          "Evento Cancelado",
-          `El evento "${eventoNombre}" ha sido cancelado`,
-          { eventoNombre },
-        )
-      }
-    },
-    [usuario, agregarNotificacion],
-  )
-
-  const notificarEventoActualizado = useCallback(
-    (eventoNombre: string, cambios: string[]) => {
-      if (usuario) {
-        agregarNotificacion(
-          NotificationEventType.EVENTO_ACTUALIZADO,
-          "Evento Actualizado",
-          `El evento "${eventoNombre}" ha sido actualizado: ${cambios.join(", ")}`,
-          { eventoNombre, cambios },
-        )
-      }
-    },
-    [usuario, agregarNotificacion],
-  )
-=======
+        // A) Escuchar ÉXITO (Burbuja Verde)
         newConnection.on("PagoCompletado", (msg: string) => {
             console.log("Notificación recibida:", msg);
             toast.success(msg, { duration: 5000, position: 'top-right' });
         });
-        newConnection.on("ReservaCompletada", (msg: string) => {
-            console.log("Notificación recibida:", msg);
-            toast.success(msg, { duration: 5000, position: 'top-right' });
+
+        // B) Escuchar FALLO (Burbuja Roja) - Lo nuevo que agregamos
+        newConnection.on("PagoFallido", (msg: string) => {
+            console.log(" Alerta de fallo recibida:", msg);
+            toast.error(msg, { duration: 6000, position: 'top-right' });
         });
 
+        // 4. Iniciar conexión y Registrar al usuario
         const startConnection = async () => {
             try {
                 await newConnection.start();
-                console.log(`Invocando RegistrarUsuario para: ${username}`);
-                await newConnection.invoke("RegistrarUsuario", username);
+                console.log("SignalR Conectado. ID:", newConnection.connectionId);
+
+                // Paso crítico: Unir al usuario a su grupo personal
+                if (username) {
+                    await newConnection.invoke("RegistrarUsuario", username);
+                    console.log(` Usuario registrado en el grupo: ${username}`);
+                }
 
             } catch (err) {
-                console.error("ERROR FATAL EN SIGNALR:", err);
+                console.error(" Error crítico al conectar/registrar SignalR:", err);
             }
         };
->>>>>>> Stashed changes
 
-  return {
-    notificarReservaConfirmada,
-    notificarPagoCompletado,
-    notificarPagoFallido,
-    notificarEventoPublicado,
-    notificarEventoCancelado,
-    notificarEventoActualizado,
-  }
-}
+        startConnection();
+        setConnection(newConnection);
+
+        // 5. Limpieza al salir de la página
+        return () => {
+            if (newConnection) {
+                newConnection.stop();
+                console.log("Conexión SignalR cerrada.");
+            }
+        };
+
+    }, [isAuthenticated, username]); // Se reinicia si cambia el usuario
+
+    return { connection };
+};
+
+       

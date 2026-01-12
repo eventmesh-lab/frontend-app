@@ -3,6 +3,34 @@
   "WorkspaceRootPath": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\GenerarNuevoCupon.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\presentation\\pages\\GenerarNuevoCupon.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\App.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\App.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\config\\env.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\config\\env.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\PagoPage.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\presentation\\pages\\PagoPage.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\EventosPage.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\presentation\\pages\\EventosPage.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\components\\PagoStripe\\PagoStripe.tsx||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\presentation\\components\\PagoStripe\\PagoStripe.tsx||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\hooks\\useSignalR.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\presentation\\hooks\\useSignalR.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\UpdateUserPage.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\presentation\\pages\\UpdateUserPage.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
@@ -42,7 +70,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -53,8 +81,102 @@
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "GenerarNuevoCupon.tsx",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\GenerarNuevoCupon.tsx",
+              "RelativeDocumentMoniker": "src\\presentation\\pages\\GenerarNuevoCupon.tsx",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\GenerarNuevoCupon.tsx",
+              "RelativeToolTip": "src\\presentation\\pages\\GenerarNuevoCupon.tsx",
+              "ViewState": "AgIAAHkAAAAAAAAAAAAAAH8AAACUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T22:08:26.215Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "env.ts",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\config\\env.ts",
+              "RelativeDocumentMoniker": "src\\config\\env.ts",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\config\\env.ts",
+              "RelativeToolTip": "src\\config\\env.ts",
+              "ViewState": "AgIAABgAAAAAAAAAAAAAADsAAAAyAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T20:00:46.558Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "PagoStripe.tsx",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\components\\PagoStripe\\PagoStripe.tsx",
+              "RelativeDocumentMoniker": "src\\presentation\\components\\PagoStripe\\PagoStripe.tsx",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\components\\PagoStripe\\PagoStripe.tsx",
+              "RelativeToolTip": "src\\presentation\\components\\PagoStripe\\PagoStripe.tsx",
+              "ViewState": "AgIAAF4AAAAAAAAAAAAAAIEAAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T19:47:56.583Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "EventosPage.tsx",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\EventosPage.tsx",
+              "RelativeDocumentMoniker": "src\\presentation\\pages\\EventosPage.tsx",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\EventosPage.tsx",
+              "RelativeToolTip": "src\\presentation\\pages\\EventosPage.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T19:42:19.686Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PagoPage.tsx",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\PagoPage.tsx",
+              "RelativeDocumentMoniker": "src\\presentation\\pages\\PagoPage.tsx",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\PagoPage.tsx",
+              "RelativeToolTip": "src\\presentation\\pages\\PagoPage.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T19:39:24.352Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "useSignalR.ts",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\hooks\\useSignalR.ts",
+              "RelativeDocumentMoniker": "src\\presentation\\hooks\\useSignalR.ts",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\hooks\\useSignalR.ts",
+              "RelativeToolTip": "src\\presentation\\hooks\\useSignalR.ts",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T19:31:56.459Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "App.tsx",
+              "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\App.tsx",
+              "RelativeDocumentMoniker": "src\\App.tsx",
+              "ToolTip": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\App.tsx",
+              "RelativeToolTip": "src\\App.tsx",
+              "ViewState": "AgIAAEcAAAAAAAAAAAAAwF0AAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-01-12T19:27:24.249Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
               "Title": "UpdateUserPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\UpdateUserPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\UpdateUserPage.tsx",
@@ -62,12 +184,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\UpdateUserPage.tsx",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T23:16:19.797Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T23:16:19.797Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 8,
               "Title": "UserDetailPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\UserDetailPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\UserDetailPage.tsx",
@@ -75,12 +196,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\UserDetailPage.tsx",
               "ViewState": "AgIAAAkAAAAAAAAAAAAAABoAAABWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T23:16:41.627Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T23:16:41.627Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 12,
               "Title": "ChangePasswordPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\ChangePasswordPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\ChangePasswordPage.tsx",
@@ -88,12 +208,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\ChangePasswordPage.tsx",
               "ViewState": "AgIAAB0AAAAAAAAAAAAAACwAAABDAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-24T01:55:34.075Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-24T01:55:34.075Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 9,
               "Title": "ProfileUserPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\ProfileUserPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\ProfileUserPage.tsx",
@@ -101,12 +220,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\ProfileUserPage.tsx",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T23:29:07.315Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T23:29:07.315Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 11,
               "Title": "RegisterUserOrganizerPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\RegisterUserOrganizerPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\RegisterUserOrganizerPage.tsx",
@@ -114,12 +232,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\RegisterUserOrganizerPage.tsx",
               "ViewState": "AgIAAHYBAAAAAAAAAADwv6UAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T23:16:02.303Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T23:16:02.303Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 10,
               "Title": "RegistroPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\RegistroPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\RegistroPage.tsx",
@@ -127,12 +244,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\RegistroPage.tsx",
               "ViewState": "AgIAAHkBAAAAAAAAAAAUwKUBAAAvAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-22T03:36:42.715Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-22T03:36:42.715Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 13,
               "Title": "UserByAdminPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\UserByAdminPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\UserByAdminPage.tsx",
@@ -140,12 +256,11 @@
               "RelativeToolTip": "src\\presentation\\pages\\UserByAdminPage.tsx",
               "ViewState": "AgIAAAcAAAAAAAAAAAAIwCMAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-29T23:16:34.77Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-29T23:16:34.77Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 14,
               "Title": "LoginPage.tsx",
               "DocumentMoniker": "C:\\Users\\Crismary Gonzalez\\Documents\\GitHub\\frontend-app\\src\\presentation\\pages\\LoginPage.tsx",
               "RelativeDocumentMoniker": "src\\presentation\\pages\\LoginPage.tsx",

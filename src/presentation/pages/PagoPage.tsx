@@ -29,7 +29,7 @@ interface RegistrarPagoDTO {
     correo: string;
     moneda: string;
     monto: number;
-    idCoupon: string; // <-- 1. Campo agregado
+    IdCoupon: string; // <-- 1. Campo agregado
 }
 
 const PaymentPage: React.FC = () => {
@@ -131,7 +131,7 @@ const PaymentPage: React.FC = () => {
             correo: username,
             moneda: moneda,
             monto: parseFloat(montoFinal.toFixed(2)),
-            idCoupon: couponIdToSend
+            IdCoupon: couponIdToSend
         };
 
         try {
