@@ -20,6 +20,14 @@ import UserDetailPage from "./presentation/pages/UserDetailPage"
 import UserByAdminPage from "./presentation/pages/UserByAdminPage"
 import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
 import UpdateUserPage from "./presentation/pages/UpdateUserPage"
+<<<<<<< Updated upstream
+=======
+import PagoPage from "./presentation/pages/PagoPage"
+import React from 'react';
+import { Toaster } from 'react-hot-toast'; 
+import { useSignalR } from './presentation/hooks/useSignalR'; 
+import GenerarNuevoCupon from "./presentation/pages/GenerarNuevoCupon"
+>>>>>>> Stashed changes
 
 function App() {
     return (
@@ -71,7 +79,26 @@ function App() {
                                 </PrivateRoute>
                             }
                         />
+<<<<<<< Updated upstream
 
+=======
+                        <Route
+                            path="/pago/:idReserva/:monto"
+                            element={
+                                    <MainLayout>
+                                        <PagoPage />
+                                    </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="generarCupon"
+                            element={
+                                <MainLayout>
+                                    <GenerarNuevoCupon />
+                                </MainLayout>
+                            }
+                        />
+>>>>>>> Stashed changes
                         {/* Rutas protegidas - organizador */}
                         <Route
                             path="/organizador"

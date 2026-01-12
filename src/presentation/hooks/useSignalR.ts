@@ -41,6 +41,7 @@ export function useSignalR() {
     [usuario, agregarNotificacion],
   )
 
+<<<<<<< Updated upstream
   const notificarPagoFallido = useCallback(
     (monto: number, razon: string) => {
       if (usuario) {
@@ -96,6 +97,27 @@ export function useSignalR() {
     },
     [usuario, agregarNotificacion],
   )
+=======
+        newConnection.on("PagoCompletado", (msg: string) => {
+            console.log("Notificación recibida:", msg);
+            toast.success(msg, { duration: 5000, position: 'top-right' });
+        });
+        newConnection.on("ReservaCompletada", (msg: string) => {
+            console.log("Notificación recibida:", msg);
+            toast.success(msg, { duration: 5000, position: 'top-right' });
+        });
+
+        const startConnection = async () => {
+            try {
+                await newConnection.start();
+                console.log(`Invocando RegistrarUsuario para: ${username}`);
+                await newConnection.invoke("RegistrarUsuario", username);
+
+            } catch (err) {
+                console.error("ERROR FATAL EN SIGNALR:", err);
+            }
+        };
+>>>>>>> Stashed changes
 
   return {
     notificarReservaConfirmada,
