@@ -1,366 +1,484 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import useAuth from "../contexts/Auth";
-import PaymentForm from '../components/PagoStripe/PagoStripe';
-// Importamos iconos de lucide-react para un aspecto más profesional
-import {
-    CreditCard,
-    CheckCircle2,
-    AlertCircle,
-    Loader2,
-    Wallet,
-    DollarSign,
-    Globe,
-    ShieldCheck
-} from "lucide-react";
+"use client"
 
-// --- Interfaces (SIN CAMBIOS) ---
-interface MetodoPago {
-    idMedioPago: string;
-    tipoMedioPago: string;
-    ultimosCuatroDigitos: string;
-    medioPredeterminado: boolean;
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import AdminLayout from "../layouts/AdminLayout"
+import Card from "../components/ui/Card"
+import Button from "../components/ui/Button"
+import Input from "../components/ui/Input"
+import FormField from "../components/ui/FormField"
+import Alert from "../components/ui/Alert"
+import { apiConfig } from "../../config/env"
+import { Copy, Check, Mail, User, Phone, MapPin, Calendar, Lock } from "lucide-react"
+
+/**
+ * Genera una contraseña segura aleatoria
+ */
+function generarPasswordSegura(): string {
+  const longitud = 12
+  const mayusculas = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  const minusculas = "abcdefghijklmnopqrstuvwxyz"
+  const numeros = "0123456789"
+  const simbolos = "!@#$%&*"
+  const todos = mayusculas + minusculas + numeros + simbolos
+
+  let password = ""
+  // Asegurar al menos un carácter de cada tipo
+  password += mayusculas[Math.floor(Math.random() * mayusculas.length)]
+  password += minusculas[Math.floor(Math.random() * minusculas.length)]
+  password += numeros[Math.floor(Math.random() * numeros.length)]
+  password += simbolos[Math.floor(Math.random() * simbolos.length)]
+
+  // Completar el resto de la contraseña
+  for (let i = password.length; i < longitud; i++) {
+    password += todos[Math.floor(Math.random() * todos.length)]
+  }
+
+  // Mezclar los caracteres
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("")
 }
 
-interface RegistrarPagoDTO {
-    stripeMedioPagoId: string;
-    idReserva: string;
-    correo: string;
-    moneda: string;
-    monto: number;
+interface CredencialesGeneradas {
+  email: string
+  password: string
+  nombre: string
 }
 
-const PaymentPage: React.FC = () => {
-    // --- LÓGICA (SIN CAMBIOS) ---
-    const { idReserva } = useParams<{ idReserva: string }>();
-    const { monto } = useParams<{ monto: string }>();
-    const { username, isAuthenticated } = useAuth() as { username: string, isAuthenticated: boolean };
-    const navigate = useNavigate();
+/**
+ * Página para que el administrador cree un usuario tipo Organizador
+ * Genera una contraseña automáticamente y muestra las credenciales
+ */
+export default function RegisterUserOrganizerPage() {
+  const navigate = useNavigate()
 
-    const [metodosPagoAPI, setMetodosPagoAPI] = useState<MetodoPago[]>([]);
-    const [loadingMethods, setLoadingMethods] = useState<boolean>(true);
-    const [selectedMethodId, setSelectedMethodId] = useState<string>('');
-    const montoDecimal = monto ? parseFloat(monto) : 0;
-    const [montoDef, setMontoDef] = useState<number>(montoDecimal);
+  // Estado del formulario
+  const [formData, setFormData] = useState({
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    direccion: "",
+    fechaNacimiento: "",
+  })
 
-    const [moneda, setMoneda] = useState<string>('USD');
-    const [processingPayment, setProcessingPayment] = useState<boolean>(false);
-    const [paymentMsg, setPaymentMsg] = useState<{ type: 'success' | 'danger', text: string } | null>(null);
+  // Estado de la aplicación
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [credenciales, setCredenciales] = useState<CredencialesGeneradas | null>(null)
+  const [copiado, setCopiado] = useState(false)
 
-    const fetchMetodosPago = async () => {
-        if (!username) return;
-        setLoadingMethods(true);
-        try {
-            const response = await axios.get<MetodoPago[]>(
-                `http://localhost:7183/api/payments/obtenerMediosDePagoUsuario/${username}`
-            );
-            setMetodosPagoAPI(response.data);
+  // Estado de errores de validación
+  const [errores, setErrores] = useState<Record<string, string>>({})
 
-            const predeterminado = response.data.find(m => m.medioPredeterminado);
-            if (predeterminado) {
-                setSelectedMethodId(predeterminado.idMedioPago);
-            }
-        } catch (err) {
-            console.error('Error al cargar métodos de pago:', err);
-        } finally {
-            setLoadingMethods(false);
-        }
-    };
+  /**
+   * Maneja cambios en los campos del formulario
+   */
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+    // Limpiar error del campo al modificar
+    if (errores[name]) {
+      setErrores((prev) => ({ ...prev, [name]: "" }))
+    }
+    setError(null)
+  }
 
-    useEffect(() => {
-        if (isAuthenticated && username) {
-            fetchMetodosPago();
-        }
-    }, [isAuthenticated, username]);
+  /**
+   * Valida el formulario antes de enviar
+   */
+  const validarFormulario = (): boolean => {
+    const nuevosErrores: Record<string, string> = {}
 
-    const handleRealizarPago = async () => {
-        setPaymentMsg(null);
-
-        if (!idReserva) {
-            setPaymentMsg({ type: 'danger', text: 'Error: No se encontró el ID de la reserva.' });
-            return;
-        }
-        if (!selectedMethodId) {
-            setPaymentMsg({ type: 'danger', text: 'Por favor selecciona un método de pago.' });
-            return;
-        }
-        if (monto && (parseFloat(monto) <= 0)) {
-            setPaymentMsg({ type: 'danger', text: 'El monto debe ser mayor a 0.' });
-            return;
-        }
-
-        setProcessingPayment(true);
-
-        const payload: RegistrarPagoDTO = {
-            stripeMedioPagoId: selectedMethodId,
-            idReserva: idReserva,
-            correo: username,
-            moneda: moneda,
-            monto: montoDef
-        };
-
-        try {
-            const response = await axios.post('http://localhost:7183/api/payments/realizarPagoReserva', payload);
-
-            if (response.data.exito) {
-                setPaymentMsg({ type: 'success', text: response.data.mensaje || 'Pago realizado con éxito.' });
-                // setTimeout(() => navigate('/mis-reservas'), 2000);
-            } else {
-                setPaymentMsg({ type: 'danger', text: response.data.mensaje || 'Hubo un problema con el pago.' });
-            }
-
-        } catch (error: any) {
-            console.error(error);
-            const msg = error.response?.data?.message || 'Error de conexión al procesar el pago.';
-            setPaymentMsg({ type: 'danger', text: msg });
-        } finally {
-            setProcessingPayment(false);
-        }
-    };
-
-    if (!isAuthenticated) {
-        return (
-            <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="text-center text-gray-500 flex flex-col items-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-                    <p className="text-lg font-medium">Inicia sesión para continuar.</p>
-                </div>
-            </div>
-        );
+    if (!formData.nombre.trim()) {
+      nuevosErrores.nombre = "El nombre es requerido"
+    } else if (formData.nombre.trim().length < 2) {
+      nuevosErrores.nombre = "El nombre debe tener al menos 2 caracteres"
     }
 
-    // --- RENDERIZADO (NUEVO DISEÑO) ---
-    return (
-        <div className="min-h-screen bg-gray-100/70 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-            <div className="max-w-5xl mx-auto">
-                {/* Header más elegante */}
-                <div className="mb-10 text-center md:text-left md:flex md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                            Finalizar Pago
-                        </h1>
-                        <p className="mt-2 text-gray-600">
-                            Completa la información para asegurar tu reserva.
-                        </p>
-                    </div>
-                    <div className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 rounded-full bg-white shadow-sm text-sm font-medium text-blue-700 border border-blue-100">
-                        <ShieldCheck className="w-5 h-5 mr-2 text-blue-500" />
-                        Reserva ID: <span className="font-bold ml-1">{idReserva}</span>
-                    </div>
-                </div>
+    if (!formData.apellido.trim()) {
+      nuevosErrores.apellido = "El apellido es requerido"
+    } else if (formData.apellido.trim().length < 2) {
+      nuevosErrores.apellido = "El apellido debe tener al menos 2 caracteres"
+    }
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    if (!formData.email.trim()) {
+      nuevosErrores.email = "El email es requerido"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      nuevosErrores.email = "Por favor ingresa un email válido"
+    }
 
-                    {/* COLUMNA IZQUIERDA: AGREGAR TARJETA (Envuelto en tarjeta elegante) */}
-                    <div className="lg:col-span-5 space-y-6 order-2 lg:order-1">
-                        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-100">
-                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                                <div className="p-2 bg-blue-50 rounded-lg">
-                                    <CreditCard className="w-6 h-6 text-blue-600" />
-                                </div>
-                                Agregar Nuevo Método
-                            </h3>
-                            {/* Asumimos que PaymentForm ya tiene estilos internos o se adapta al contenedor */}
-                            <div className="payment-form-container">
-                                <PaymentForm onMethodAdded={fetchMetodosPago} />
-                            </div>
-                        </div>
-                        <p className="text-center text-sm text-gray-500 flex items-center justify-center gap-1">
-                            <ShieldCheck className="w-4 h-4" /> Pagos seguros encriptados
-                        </p>
-                    </div>
+    if (!formData.telefono.trim()) {
+      nuevosErrores.telefono = "El teléfono es requerido"
+    } else if (!/^\d{11}$/.test(formData.telefono)) {
+      nuevosErrores.telefono = "El número de teléfono debe tener 11 dígitos"
+    }
 
-                    {/* COLUMNA DERECHA: SELECCIONAR Y PAGAR (El componente principal) */}
-                    <div className="lg:col-span-7 order-1 lg:order-2">
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                            <div className="p-6 md:p-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-                                    <div className="p-2 bg-blue-50 rounded-lg">
-                                        <Wallet className="w-7 h-7 text-blue-600" />
-                                    </div>
-                                    Selecciona tu método de pago
-                                </h2>
+    if (!formData.direccion.trim()) {
+      nuevosErrores.direccion = "La dirección es requerida"
+    }
 
-                                {loadingMethods ? (
-                                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                                        <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-500" />
-                                        <p className="text-base font-medium">Cargando tus tarjetas...</p>
-                                    </div>
-                                ) : metodosPagoAPI.length === 0 ? (
-                                    <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md flex items-start gap-3">
-                                        <AlertCircle className="w-6 h-6 text-amber-600 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <h4 className="font-bold text-amber-800">No hay métodos registrados</h4>
-                                            <p className="text-sm text-amber-700 mt-1">
-                                                Por favor utiliza el formulario para agregar una tarjeta de crédito o débito.
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-8">
-                                        {/* Lista de Tarjetas como Botones Seleccionables */}
-                                        <div className="space-y-3">
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">Tus tarjetas guardadas</label>
-                                            {metodosPagoAPI.map((metodo) => {
-                                                const isSelected = selectedMethodId === metodo.idMedioPago;
-                                                return (
-                                                    <label
-                                                        key={metodo.idMedioPago}
-                                                        className={`
-                                                        relative flex items-center p-5 border-2 rounded-xl cursor-pointer transition-all duration-300 group
-                                                        ${isSelected
-                                                                ? 'border-blue-600 bg-blue-50/60 shadow-sm'
-                                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
-                                                    `}
-                                                    >
-                                                        {/* Radio button oculto */}
-                                                        <input
-                                                            type="radio"
-                                                            name="paymentMethod"
-                                                            value={metodo.idMedioPago}
-                                                            checked={isSelected}
-                                                            onChange={(e) => setSelectedMethodId(e.target.value)}
-                                                            className="sr-only" // Ocultar visualmente
-                                                        />
+    if (!formData.fechaNacimiento.trim()) {
+      nuevosErrores.fechaNacimiento = "La fecha de nacimiento es requerida"
+    } else {
+      const fecha = new Date(formData.fechaNacimiento)
+      const hoy = new Date()
+      const edad = hoy.getFullYear() - fecha.getFullYear()
+      const mes = hoy.getMonth() - fecha.getMonth()
+      const dia = hoy.getDate() - fecha.getDate()
 
-                                                        <div className="mr-4">
-                                                            <div className={`p-2 rounded-full ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'}`}>
-                                                                <CreditCard className="w-6 h-6" />
-                                                            </div>
-                                                        </div>
+      const esMenorDe18 =
+        edad < 18 || (edad === 18 && mes < 0) || (edad === 18 && mes === 0 && dia < 0)
 
-                                                        <div className="flex-1">
-                                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                                                <div>
-                                                                    <span className="font-bold text-gray-900 capitalize text-lg">
-                                                                        {metodo.tipoMedioPago}
-                                                                    </span>
-                                                                    <p className="text-gray-500 text-sm mt-0.5 font-medium">
-                                                                        Terminada en •••• {metodo.ultimosCuatroDigitos}
-                                                                    </p>
-                                                                </div>
-                                                                {metodo.medioPredeterminado && (
-                                                                    <span className="mt-2 sm:mt-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
-                                                                        Predeterminado
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
+      if (esMenorDe18) {
+        nuevosErrores.fechaNacimiento = "Debe tener al menos 18 años"
+      }
+    }
 
-                                                        {/* Icono de check visual */}
-                                                        <div className={`ml-4 flex-shrink-0 text-blue-600 transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0'}`}>
-                                                            <CheckCircle2 className="w-7 h-7 fill-current" />
-                                                        </div>
-                                                    </label>
-                                                )
-                                            })}
-                                        </div>
+    setErrores(nuevosErrores)
+    return Object.keys(nuevosErrores).length === 0
+  }
 
-                                        <div className="h-px bg-gray-200 border-dashed my-8" />
+  /**
+   * Envía el formulario para crear el organizador
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setCredenciales(null)
+    setCopiado(false)
 
-                                        {/* Detalles del Pago con Inputs Modernos */}
-                                        <div>
-                                            <h5 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
-                                                Detalles de la transacción
-                                            </h5>
+    if (!validarFormulario()) {
+      return
+    }
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                {/* Input Monto */}
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-700 block">Monto a Pagar</label>
-                                                    <div className="relative rounded-md shadow-sm">
-                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                            <DollarSign className="h-5 w-5 text-gray-400" />
-                                                        </div>
-                                                        <input
-                                                            type="text"
-                                                            readOnly
-                                                            value={montoDef}
-                                                            className="block w-full pl-10 pr-4 py-3 border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-bold text-lg focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                                        />
-                                                    </div>
-                                                </div>
+    setIsLoading(true)
 
-                                                {/* Select Moneda */}
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-700 block">Moneda</label>
-                                                    <div className="relative rounded-md shadow-sm">
-                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                            <Globe className="h-5 w-5 text-gray-400" />
-                                                        </div>
-                                                        <select
-                                                            value={moneda}
-                                                            onChange={(e) => setMoneda(e.target.value)}
-                                                            className="block w-full pl-10 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg bg-white transition-colors appearance-none font-medium"
-                                                            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
-                                                        >
-                                                            <option value="USD">USD - Dólar Americano</option>
-                                                            <option value="EUR">EUR - Euro</option>
-                                                            <option value="COP">COP - Peso Colombiano</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+    try {
+      // Generar contraseña automáticamente
+      const passwordGenerada = generarPasswordSegura()
 
-                                        {/* Mensajes de Alerta Estilizados */}
-                                        {paymentMsg && (
-                                            <div className={`rounded-xl p-4 flex items-start gap-3 border ${paymentMsg.type === 'success'
-                                                    ? 'bg-green-50 border-green-200 text-green-800'
-                                                    : 'bg-red-50 border-red-200 text-red-800'
-                                                }`}>
-                                                {paymentMsg.type === 'success' ? (
-                                                    <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600" />
-                                                ) : (
-                                                    <AlertCircle className="w-6 h-6 flex-shrink-0 text-red-600" />
-                                                )}
-                                                <div className="flex-1 pt-0.5 font-medium">
-                                                    {paymentMsg.text}
-                                                </div>
-                                                <button
-                                                    onClick={() => setPaymentMsg(null)}
-                                                    className="text-current opacity-60 hover:opacity-100 transition-opacity"
-                                                >
-                                                    <span className="sr-only">Cerrar</span>
-                                                    ×
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+      // Preparar el payload según la API
+      const payload = {
+        firstName: formData.nombre.trim(),
+        lastName: formData.apellido.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phoneNumber: formData.telefono.trim(),
+        address: formData.direccion.trim(),
+        birthdate: formData.fechaNacimiento,
+        roleUser: "Organizador",
+        password: passwordGenerada,
+      }
 
-                            {/* Footer de la tarjeta con el botón de acción */}
-                            <div className="px-6 md:px-8 py-6 bg-gray-50 border-t border-gray-100">
-                                <button
-                                    onClick={handleRealizarPago}
-                                    disabled={processingPayment || metodosPagoAPI.length === 0 || !selectedMethodId}
-                                    className={`
-                                        w-full flex items-center justify-center py-4 px-6 border border-transparent rounded-xl shadow-md text-lg font-bold text-white transition-all duration-200
-                                        ${processingPayment || metodosPagoAPI.length === 0 || !selectedMethodId
-                                            ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                                            : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transform active:scale-[0.99]'}
-                                    `}
-                                >
-                                    {processingPayment ? (
-                                        <>
-                                            <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                                            Procesando tu pago...
-                                        </>
-                                    ) : (
-                                        <>
-                                            Pagar <span className="ml-2">{monto} {moneda}</span>
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      console.log("[RegisterOrganizer] Creando organizador:", payload.email)
+
+      const response = await fetch(`${apiConfig.baseUrl}${apiConfig.users.register}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Error desconocido" }))
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      console.log("[RegisterOrganizer] Organizador creado exitosamente:", data)
+
+      // Guardar las credenciales para mostrarlas
+      setCredenciales({
+        email: formData.email.trim().toLowerCase(),
+        password: passwordGenerada,
+        nombre: `${formData.nombre} ${formData.apellido}`,
+      })
+
+      // Limpiar el formulario
+      setFormData({
+        nombre: "",
+        apellido: "",
+        email: "",
+        telefono: "",
+        direccion: "",
+        fechaNacimiento: "",
+      })
+    } catch (err: any) {
+      console.error("[RegisterOrganizer] Error creando organizador:", err)
+      setError(err.message || "Error al crear el organizador")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  /**
+   * Copia las credenciales al portapapeles
+   */
+  const copiarCredenciales = async () => {
+    if (!credenciales) return
+
+    const texto = `Credenciales del Organizador
+
+Email: ${credenciales.email}
+Contraseña: ${credenciales.password}
+
+Nombre: ${credenciales.nombre}
+
+Por favor, comparte estas credenciales de forma segura con el organizador.`
+
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch (err) {
+      console.error("Error copiando al portapapeles:", err)
+      // Fallback: seleccionar texto manualmente
+      const textarea = document.createElement("textarea")
+      textarea.value = texto
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textarea)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    }
+  }
+
+  return (
+    <AdminLayout>
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Crear Nuevo Organizador</h1>
+          <p className="text-text-secondary">
+            Completa la información del organizador. Se generará una contraseña automáticamente.
+          </p>
         </div>
-    );
-};
 
-export default PaymentPage;
+        {/* Mensaje de éxito con credenciales */}
+        {credenciales && (
+          <Card className="mb-6 bg-green-50 border-green-200">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-green-800 mb-2">
+                  ✅ Organizador creado exitosamente
+                </h2>
+                <p className="text-green-700 mb-4">
+                  Las credenciales se han generado. Compártelas de forma segura con el organizador.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copiarCredenciales}
+                className="flex items-center gap-2"
+              >
+                {copiado ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copiado
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copiar
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-green-300 space-y-3">
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Nombre Completo</label>
+                <p className="text-lg font-semibold text-text-primary">{credenciales.nombre}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Email</label>
+                <p className="text-lg font-mono text-text-primary">{credenciales.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-secondary">Contraseña Generada</label>
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-mono text-text-primary font-bold">{credenciales.password}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(credenciales.password)
+                      setCopiado(true)
+                      setTimeout(() => setCopiado(false), 2000)
+                    }}
+                    className="p-1"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>Importante:</strong> Guarda estas credenciales de forma segura. La contraseña no se
+                mostrará nuevamente.
+              </p>
+            </div>
+          </Card>
+        )}
+
+        {/* Mensaje de error */}
+        {error && (
+          <Alert type="error" className="mb-6">
+            {error}
+          </Alert>
+        )}
+
+        {/* Formulario */}
+        <Card>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nombre */}
+              <FormField label="Nombre" required error={errores.nombre}>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    name="nombre"
+                    type="text"
+                    value={formData.nombre}
+                    onChange={handleChange}
+                    placeholder="Juan"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.nombre ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Apellido */}
+              <FormField label="Apellido" required error={errores.apellido}>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    name="apellido"
+                    type="text"
+                    value={formData.apellido}
+                    onChange={handleChange}
+                    placeholder="Pérez"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.apellido ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Email */}
+              <FormField label="Email" required error={errores.email}>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="organizador@ejemplo.com"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.email ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Teléfono */}
+              <FormField label="Teléfono" required error={errores.telefono}>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                  <input
+                    name="telefono"
+                    type="text"
+                    value={formData.telefono}
+                    onChange={handleChange}
+                    placeholder="04121234567"
+                    className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                      errores.telefono ? "border-danger focus:ring-danger" : ""
+                    }`}
+                  />
+                </div>
+              </FormField>
+
+              {/* Dirección */}
+              <div className="md:col-span-2">
+                <FormField label="Dirección" required error={errores.direccion}>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                    <input
+                      name="direccion"
+                      type="text"
+                      value={formData.direccion}
+                      onChange={handleChange}
+                      placeholder="Caracas, Venezuela"
+                      className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                        errores.direccion ? "border-danger focus:ring-danger" : ""
+                      }`}
+                    />
+                  </div>
+                </FormField>
+              </div>
+
+              {/* Fecha de Nacimiento */}
+              <div className="md:col-span-2">
+                <FormField label="Fecha de Nacimiento" required error={errores.fechaNacimiento}>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-3 w-5 h-5 text-text-tertiary pointer-events-none" />
+                    <input
+                      type="date"
+                      name="fechaNacimiento"
+                      value={formData.fechaNacimiento}
+                      onChange={handleChange}
+                      className={`w-full pl-10 pr-3 py-2 border border-border rounded-md text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                        errores.fechaNacimiento ? "border-danger focus:ring-danger" : ""
+                      }`}
+                    />
+                  </div>
+                </FormField>
+              </div>
+            </div>
+
+            {/* Información sobre la contraseña */}
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 mb-1">
+                    Contraseña generada automáticamente</p>
+                  <p className="text-xs text-blue-700">
+                    Se generará una contraseña segura de 12 caracteres que incluye mayúsculas, minúsculas,
+                    números y símbolos. Las credenciales se mostrarán después de crear el organizador.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="mt-8 flex gap-4 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/admin")}
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="primary" loading={isLoading} disabled={isLoading}>
+                {isLoading ? "Creando Organizador..." : "Crear Organizador"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    </AdminLayout>
+  )
+}

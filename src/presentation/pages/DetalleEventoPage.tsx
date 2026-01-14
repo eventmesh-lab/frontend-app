@@ -127,10 +127,9 @@ export default function DetalleEventoPage() {
       setError(null)
       setSuccess(null)
 
-      // Crear reserva temporal según la guía de API
-      // Esto crea una reserva temporal que expira en 10 minutos (según la guía)
-      const reservaTemporal = await crearReservaTemporalUseCase.ejecutar({
-        asistenteId: username,
+      // Paso 1: Crear reserva
+      const reserva = await crearReserva({
+        asistenteId: usuario.id,
         eventoId: eventoDetalle.id,
         cantidad,
         seccionId: seccionSeleccionada || undefined,
