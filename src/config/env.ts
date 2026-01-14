@@ -57,7 +57,7 @@ export const keycloakConfig = {
   clientId:  'aspnetcore',
   
   /** Client Secret de la aplicación */
-  clientSecret: 'PzaioIxlVKVINnJ7VJwCILdBoUlUWB05',
+    clientSecret: 'PzaioIxlVKVINnJ7VJwCILdBoUlUWB05',
   
   /** URL del endpoint de token */
   get tokenUrl() {

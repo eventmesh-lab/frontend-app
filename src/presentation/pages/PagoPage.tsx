@@ -145,7 +145,7 @@ const PaymentPage: React.FC = () => {
 
 
                 setTimeout(() => {
-                    navigate('/'); 
+                    navigate('/');
                 }, 2000);
 
             } else {

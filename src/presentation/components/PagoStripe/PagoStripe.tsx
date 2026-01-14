@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Form, Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import  useAuth  from "../../contexts/Auth" // asegúrate que tu hook esté en TS/TSX
+import useAuth from "../../contexts/Auth"
 import axios from 'axios';
 
 // Carga la clave pública de Stripe
@@ -19,7 +19,7 @@ interface PaymentPayload {
 const CardForm: React.FC = () => {
     const stripe = useStripe();
     const elements = useElements();
-    const { isAuthenticated, username } = useAuth();
+    const { username } = useAuth() as { username: string }; // tipado del hook
 
     const [loading, setLoading] = useState<boolean>(false);
     const [errorMsg, setErrorMsg] = useState<string>('');
@@ -56,11 +56,11 @@ const CardForm: React.FC = () => {
                 return;
             }
 
-            // Payload final que envías a tu backend
             const payload: PaymentPayload = {
                 medioPagoStripeID: paymentMethod.id,
-                correo: username || "correo_anonimo@test.com", // Asegúrate que username no sea null/undefined
+                correo: username || "correo_anonimo@test.com",
             };
+
 
             console.log('Enviando a backend:', payload);
 
