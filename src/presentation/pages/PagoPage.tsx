@@ -25,7 +25,7 @@ interface Coupon {
 
 interface RegistrarPagoDTO {
     stripeMedioPagoId: string;
-    idReserva: string;
+    idEvento: string;
     correo: string;
     moneda: string;
     monto: number;
@@ -33,7 +33,7 @@ interface RegistrarPagoDTO {
 }
 
 const PaymentPage: React.FC = () => {
-    const { idReserva } = useParams<{ idReserva: string }>();
+    const { idEvento } = useParams<{ idEvento: string }>();
     const { monto } = useParams<{ monto: string }>();
     const { username, isAuthenticated } = useAuth() as { username: string, isAuthenticated: boolean };
     const navigate = useNavigate();
@@ -115,19 +115,18 @@ const PaymentPage: React.FC = () => {
 
     const handleRealizarPago = async () => {
         setPaymentMsg(null);
-        if (!idReserva || !selectedMethodId || montoFinal <= 0) {
+        if (!idEvento || !selectedMethodId || montoFinal <= 0) {
             setPaymentMsg({ type: 'danger', text: 'Verifica los datos de la reserva o el método de pago.' });
             return;
         }
 
         setProcessingPayment(true);
 
-        // <-- 2. Lógica para asignar el GUID del cupón o el vacío
         const couponIdToSend = selectedCoupon ? selectedCoupon.id : EMPTY_GUID;
 
         const payload: RegistrarPagoDTO = {
             stripeMedioPagoId: selectedMethodId,
-            idReserva: idReserva,
+            idEvento: idEvento,
             correo: username,
             moneda: moneda,
             monto: parseFloat(montoFinal.toFixed(2)),
@@ -136,12 +135,18 @@ const PaymentPage: React.FC = () => {
 
         try {
             const response = await axios.post('http://localhost:7183/api/payments/realizarPagoReserva', payload);
-            if (response.data.exito) {
-                setPaymentMsg({ type: 'success', text: response.data.mensaje || 'Pago realizado con éxito.' });
 
-                // <-- 3. Actualizar la lista de cupones tras el pago exitoso (porque el back cambió su estado)
+            if (response.data.exito) {
+                // 1. Mostrar mensaje de éxito
+                setPaymentMsg({ type: 'success', text: response.data.mensaje || 'Pago realizado con éxito. Redirigiendo...' });
+
                 fetchCoupons();
-                setSelectedCoupon(null); // Limpiamos la selección actual ya que se usó
+                setSelectedCoupon(null);
+
+              
+                setTimeout(() => {
+                    navigate('/'); 
+                }, 2000);
 
             } else {
                 setPaymentMsg({ type: 'danger', text: response.data.mensaje || 'Error en el pago.' });
@@ -163,7 +168,7 @@ const PaymentPage: React.FC = () => {
                 <div className="mb-8 text-center">
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">Finalizar Pago de Reserva</h2>
                     <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        Reserva ID: {idReserva}
+                        
                     </span>
                 </div>
 

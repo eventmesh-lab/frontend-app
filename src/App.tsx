@@ -83,7 +83,7 @@ function App() {
                             }
                         />
                         <Route
-                            path="/pago/:idReserva/:monto"
+                            path="/pago/:idEvento/:monto"
                             element={
                                     <MainLayout>
                                         <PagoPage />

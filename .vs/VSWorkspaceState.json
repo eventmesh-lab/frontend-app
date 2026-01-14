@@ -5,10 +5,8 @@
     "\\src\\config",
     "\\src\\presentation",
     "\\src\\presentation\\components",
-    "\\src\\presentation\\components\\PagoStripe",
-    "\\src\\presentation\\hooks",
-    "\\src\\presentation\\pages"
+    "\\src\\presentation\\components\\PagoStripe"
   ],
-  "SelectedNode": "\\src\\presentation\\pages\\GenerarNuevoCupon.tsx",
+  "SelectedNode": "\\src\\App.tsx",
   "PreviewInSolutionExplorer": false
 }

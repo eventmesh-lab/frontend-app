@@ -2,27 +2,24 @@ import React, { useState } from 'react';
 import { Button, Form, Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-// Asegúrate de que tu archivo Auth también sea .tsx o tenga tipos definidos.
-// Si no, TypeScript podría quejarse de la importación.
-import  useAuth  from "../../contexts/Auth";
+import  useAuth  from "../../contexts/Auth" // asegúrate que tu hook esté en TS/TSX
 import axios from 'axios';
 
-// Reemplaza con tu Public Key real
-const stripePromise = loadStripe('pk_test_51Sn62pKureabdrqaMcgSFqff5S8Qk1yCiDJI28kKfF6Zocko1DHA2Vji1joa46hF2PKKf7HLmoK3rAVvOiJ8UB0900wox5EIra');
+// Carga la clave pública de Stripe
+const stripePromise = loadStripe(
+    'pk_test_51Sn62pKureabdrqaMcgSFqff5S8Qk1yCiDJI28kKfF6Zocko1DHA2Vji1joa46hF2PKKf7HLmoK3rAVvOiJ8UB0900wox5EIra'
+); // Reemplaza con tu Public Key real
 
-// Interfaz para el payload que se envía al backend
+// Tipado del payload que envías al backend
 interface PaymentPayload {
     medioPagoStripeID: string;
-    tipoPago: string;
     correo: string;
 }
 
 const CardForm: React.FC = () => {
     const stripe = useStripe();
     const elements = useElements();
-    // Asumimos que useAuth devuelve un objeto con username tipo string.
-    // Si username puede ser null, deberás manejar ese caso.
-    const { username } = useAuth() as { username: string };
+    const { isAuthenticated, username } = useAuth();
 
     const [loading, setLoading] = useState<boolean>(false);
     const [errorMsg, setErrorMsg] = useState<string>('');
@@ -40,23 +37,21 @@ const CardForm: React.FC = () => {
             return;
         }
 
-        // TypeScript necesita asegurarse de que el elemento no es nulo
-        const cardElement = elements.getElement(CardElement);
-        if (!cardElement) {
-            setErrorMsg('Error al cargar el elemento de tarjeta.');
-            setLoading(false);
-            return;
-        }
-
         try {
             // Crear PaymentMethod en Stripe
             const { error, paymentMethod } = await stripe.createPaymentMethod({
                 type: 'card',
-                card: cardElement,
+                card: elements.getElement(CardElement)!,
             });
 
             if (error) {
-                setErrorMsg(error.message || 'Error desconocido de Stripe');
+                setErrorMsg(error.message ?? 'Error desconocido');
+                setLoading(false);
+                return;
+            }
+
+            if (!paymentMethod) {
+                setErrorMsg('No se pudo crear el método de pago.');
                 setLoading(false);
                 return;
             }
@@ -64,8 +59,7 @@ const CardForm: React.FC = () => {
             // Payload final que envías a tu backend
             const payload: PaymentPayload = {
                 medioPagoStripeID: paymentMethod.id,
-                tipoPago: 'Tarjeta de credito', // Valor constante
-                correo: username,    // Valor constante
+                correo: username || "correo_anonimo@test.com", // Asegúrate que username no sea null/undefined
             };
 
             console.log('Enviando a backend:', payload);
@@ -73,14 +67,11 @@ const CardForm: React.FC = () => {
             await axios.post('http://localhost:7183/api/payments/registroMedioDePago', payload);
 
             setSuccessMsg('Tarjeta registrada y PaymentMethod enviado al backend.');
-            alert("Metodo de pago registrado");
+            alert('Método de pago registrado');
             window.location.reload();
-
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            // Manejo básico de error, puedes mejorarlo verificando si es error de Axios
-            const message = error.response?.data?.message || 'Error al registrar la tarjeta.';
-            setErrorMsg(message);
+            setErrorMsg('Error al registrar la tarjeta.');
         } finally {
             setLoading(false);
         }
@@ -127,4 +118,4 @@ const PaymentForm: React.FC = () => (
     </Elements>
 );
 
-export default PaymentForm; 
+export default PaymentForm;
