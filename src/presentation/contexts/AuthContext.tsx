@@ -33,9 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Verificar si hay un token válido
         if (keycloakService.isTokenValid()) {
           const keycloakUser = keycloakService.getUser()
+
           if (keycloakUser) {
             // Obtener usuario completo desde API
             const usuarioEncontrado = await usuariosApi.obtenerPorEmail(keycloakUser.email)
+
             if (usuarioEncontrado) {
               setUsuario(usuarioEncontrado)
             }

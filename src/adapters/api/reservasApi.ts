@@ -32,8 +32,58 @@ function mapReservaToApi(reserva: Partial<Reserva>): any {
   return mapped
 }
 
+/**
+ * Interfaz para items de reserva según la guía de API
+ */
+export interface ReservaItem {
+  seccionId: string
+  asientoId: string | null
+  tipoTicket: string
+  precio: number
+  moneda: string
+}
+
+/**
+ * Interfaz para el request de crear reserva según la guía de API
+ */
+export interface CrearReservaRequest {
+  eventoId: string
+  asistenteId: string
+  items: ReservaItem[]
+}
+
+/**
+ * Interfaz para la respuesta de crear reserva según la guía de API
+ */
+export interface CrearReservaResponse {
+  reservaId: string
+  fechaExpiracion: string
+  montoTotal: number
+  exitoso: boolean
+  mensaje: string
+}
+
 class ReservasApiAdapter {
   private client = httpClient.getBaseClient()
+  private reservationsClient = httpClient.getReservationsClient()
+
+  /**
+   * Crea una reserva temporal usando el formato de la guía de API
+   * Endpoint: POST /api/Reservas
+   * Según docs/API-CONSUMPTION-GUIDE.md
+   * Usa el cliente de Reservations API (puerto 5010)
+   */
+  async crearReservaTemporal(request: CrearReservaRequest): Promise<CrearReservaResponse> {
+    try {
+      // Usar el cliente específico de Reservations API (puerto 5010)
+      const response = await this.reservationsClient.post<CrearReservaResponse>("/api/Reservas", request)
+      console.log("[v0] Reserva temporal creada:", response.data.reservaId, "Expira:", response.data.fechaExpiracion)
+      return response.data
+    } catch (error: any) {
+      console.error("[v0] Error creando reserva temporal:", error)
+      throw new Error(error.response?.data?.error || error.response?.data?.message || "Error al crear la reserva temporal")
+    }
+  }
 
   async crearReserva(reserva: Partial<Reserva>): Promise<ReservaEntity> {
     try {

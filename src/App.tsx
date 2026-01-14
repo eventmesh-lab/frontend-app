@@ -23,12 +23,22 @@ import UserDetailPage from "./presentation/pages/UserDetailPage"
 import UserByAdminPage from "./presentation/pages/UserByAdminPage"
 import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
 import UpdateUserPage from "./presentation/pages/UpdateUserPage"
+import PagoPage from "./presentation/pages/PagoPage"
+import React from 'react';
+import { Toaster } from 'react-hot-toast'; 
+import { useSignalR } from './presentation/hooks/useSignalR';
+import GenerarNuevoCupon from "./presentation/pages/GenerarNuevoCupon" 
 
+const SignalRHandler = () => {
+    useSignalR(); // Conecta a SignalR
+    return <Toaster position="top-right" />; // Muestra las burbujas
+};
 function App() {
     return (
         <Router>
             <AuthProvider>
                 <NotificationProvider>
+                    <SignalRHandler />
                     <Routes>
                         {/* Rutas públicas */}
                         <Route path="/login" element={<LoginPage />} />
@@ -72,6 +82,22 @@ function App() {
                                         <MisReservasPage />
                                     </MainLayout>
                                 </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/pago/:idEvento/:monto"
+                            element={
+                                    <MainLayout>
+                                        <PagoPage />
+                                    </MainLayout>
+                            }
+                        />
+                                                <Route
+                            path="generarCupon"
+                            element={
+                                <MainLayout>
+                                    <GenerarNuevoCupon />
+                                </MainLayout>
                             }
                         />
 
