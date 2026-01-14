@@ -26,7 +26,8 @@ import UpdateUserPage from "./presentation/pages/UpdateUserPage"
 import PagoPage from "./presentation/pages/PagoPage"
 import React from 'react';
 import { Toaster } from 'react-hot-toast'; 
-import { useSignalR } from './presentation/hooks/useSignalR'; 
+import { useSignalR } from './presentation/hooks/useSignalR';
+import GenerarNuevoCupon from "./presentation/pages/GenerarNuevoCupon" 
 
 const SignalRHandler = () => {
     useSignalR(); // Conecta a SignalR
@@ -84,11 +85,19 @@ function App() {
                             }
                         />
                         <Route
-                            path="/pago/:idReserva/:monto"
+                            path="/pago/:idEvento/:monto"
                             element={
                                     <MainLayout>
                                         <PagoPage />
                                     </MainLayout>
+                            }
+                        />
+                                                <Route
+                            path="generarCupon"
+                            element={
+                                <MainLayout>
+                                    <GenerarNuevoCupon />
+                                </MainLayout>
                             }
                         />
 
