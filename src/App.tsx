@@ -28,6 +28,9 @@ import React from 'react';
 import { Toaster } from 'react-hot-toast'; 
 import { useSignalR } from './presentation/hooks/useSignalR';
 import GenerarNuevoCupon from "./presentation/pages/GenerarNuevoCupon" 
+import SurveysPage from "./presentation/pages/MisEncuestasPage"
+import AnswerSurveyPage from "./presentation/pages/ResponderEncuestaPage"
+import RespuestasEncuestasPage from "./presentation/pages/RespuestasEncuestasPage"
 
 const SignalRHandler = () => {
     useSignalR(); // Conecta a SignalR
@@ -92,11 +95,35 @@ function App() {
                                     </MainLayout>
                             }
                         />
-                                                <Route
-                            path="generarCupon"
+                       <Route
+                            path="/generarCupon"
                             element={
                                 <MainLayout>
                                     <GenerarNuevoCupon />
+                                </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="/misEncuestas"
+                            element={
+                                <MainLayout>
+                                    <SurveysPage />
+                                </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="/encuesta/respuesta/:idSurvey"
+                            element={
+                                <MainLayout>
+                                    <AnswerSurveyPage />
+                                </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="/encuesta/resultado/:eventId"
+                            element={
+                                <MainLayout>
+                                    <RespuestasEncuestasPage />
                                 </MainLayout>
                             }
                         />
