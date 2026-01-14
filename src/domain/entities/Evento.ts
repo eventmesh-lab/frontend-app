@@ -39,8 +39,11 @@ export interface Evento {
   aforoDisponible: number
   organizadorId: string
   tarifaPublicacion?: number
+  transaccionPagoId?: string
   secciones?: SeccionEvento[]
   imagen?: string
+  imagenesSecundarias?: string[] // URLs completas de imágenes secundarias del blob storage
+  folletoUrl?: string // URL completa del folleto PDF en blob storage
   fechaCreacion: Date
   fechaActualizacion: Date
 }
@@ -61,8 +64,11 @@ export class EventoEntity implements Evento {
   aforoDisponible: number
   organizadorId: string
   tarifaPublicacion?: number
+  transaccionPagoId?: string
   secciones?: SeccionEvento[]
   imagen?: string
+  imagenesSecundarias?: string[] // URLs completas de imágenes secundarias del blob storage
+  folletoUrl?: string // URL completa del folleto PDF en blob storage
   fechaCreacion: Date
   fechaActualizacion: Date
 
@@ -82,8 +88,11 @@ export class EventoEntity implements Evento {
     this.aforoDisponible = data.aforoDisponible
     this.organizadorId = data.organizadorId
     this.tarifaPublicacion = data.tarifaPublicacion
+    this.transaccionPagoId = data.transaccionPagoId
     this.secciones = data.secciones
     this.imagen = data.imagen
+    this.imagenesSecundarias = data.imagenesSecundarias
+    this.folletoUrl = data.folletoUrl
     this.fechaCreacion = data.fechaCreacion
     this.fechaActualizacion = data.fechaActualizacion
   }
@@ -109,11 +118,17 @@ export class EventoEntity implements Evento {
   }
 
   puedeReservar(): boolean {
-    return this.estaPublicado() && this.aforoDisponible > 0
+    // Solo verificar que el evento esté publicado
+    // La validación de capacidad la maneja el API de tickets
+    return this.estaPublicado()
   }
 
   puedePagarPublicacion(): boolean {
     return this.estaBorrador()
+  }
+
+  estaPagado(): boolean {
+    return !!this.transaccionPagoId && this.transaccionPagoId !== ""
   }
 
   puedeIniciar(): boolean {

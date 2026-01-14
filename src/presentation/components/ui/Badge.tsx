@@ -1,6 +1,6 @@
 interface BadgeProps {
   children: string
-  variant?: "success" | "warning" | "danger" | "info" | "primary"
+  variant?: "success" | "warning" | "danger" | "info" | "primary" | "default"
   className?: string
 }
 
@@ -9,8 +9,9 @@ export default function Badge({ children, variant = "primary", className = "" }:
     success: "bg-success text-white",
     warning: "bg-warning text-white",
     danger: "bg-danger text-white",
-    info: "bg-primary text-white",
+    info: "bg-info text-white",
     primary: "bg-primary text-white",
+    default: "bg-gray-500 text-white",
   }
 
   return (

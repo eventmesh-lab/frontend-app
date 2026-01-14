@@ -9,10 +9,15 @@ class HttpClient {
   private eventsApiClient: AxiosInstance
   private usersApiClient: AxiosInstance
   private baseApiClient: AxiosInstance
+  private ticketsApiClient: AxiosInstance
+  private reservationsApiClient: AxiosInstance
 
   constructor() {
-    const eventsApiUrl = import.meta.env.VITE_EVENTS_API_URL || 'http://localhost:3000'
-    const usersApiUrl = import.meta.env.VITE_USERS_API_URL || 'http://localhost:3000'
+    // URLs por defecto según los puertos de los contenedores Docker
+    const eventsApiUrl = import.meta.env.VITE_EVENTS_API_URL || 'http://localhost:5000'
+    const usersApiUrl = import.meta.env.VITE_USERS_API_URL || 'http://localhost:7181'
+    const ticketsApiUrl = import.meta.env.VITE_TICKETS_API_URL || 'http://localhost:5005'
+    const reservationsApiUrl = import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:5010'
     const baseApiUrl = import.meta.env.VITE_API_BASE_URL || eventsApiUrl
 
     // Cliente para Events API
@@ -39,17 +44,40 @@ class HttpClient {
       },
     })
 
+    // Cliente para Tickets API
+    this.ticketsApiClient = axios.create({
+      baseURL: ticketsApiUrl,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    // Cliente para Reservations API (según docs/API-CONSUMPTION-GUIDE.md)
+    this.reservationsApiClient = axios.create({
+      baseURL: reservationsApiUrl,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
     // Interceptores para agregar token de autenticación
     this.setupInterceptors(this.eventsApiClient)
     this.setupInterceptors(this.usersApiClient)
     this.setupInterceptors(this.baseApiClient)
+    this.setupInterceptors(this.ticketsApiClient)
+    this.setupInterceptors(this.reservationsApiClient)
   }
 
   private setupInterceptors(client: AxiosInstance): void {
     // Interceptor de request: agrega el token de autenticación
     client.interceptors.request.use(
       (config) => {
-        const token = keycloakService.getToken()
+        // Usar el token de Auth.tsx (accessToken) que es el sistema real de autenticación
+        // en lugar de keycloakService.getToken() que usa una key diferente
+        const authToken = localStorage.getItem('accessToken')
+        const keycloakToken = keycloakService.getToken()
+        const token = authToken || keycloakToken
+        
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }
@@ -72,9 +100,16 @@ class HttpClient {
             error.config.headers.Authorization = `Bearer ${refreshed.accessToken}`
             return client.request(error.config)
           } else {
-            // No se pudo refrescar, redirigir a login
-            keycloakService.logout()
-            window.location.href = '/login'
+            // No se pudo refrescar
+            // Solo redirigir a login si NO es el cliente de reservas
+            // El cliente de reservas puede tener su propio sistema de autenticación
+            const isReservationsClient = (error.config?.baseURL as string)?.includes('5010')
+            if (!isReservationsClient) {
+              keycloakService.logout()
+              window.location.href = '/login'
+            }
+            // Si es el cliente de reservas, dejar que el error se propague
+            // para que la aplicación pueda manejarlo apropiadamente
           }
         }
         return Promise.reject(error)
@@ -101,6 +136,20 @@ class HttpClient {
    */
   getBaseClient(): AxiosInstance {
     return this.baseApiClient
+  }
+
+  /**
+   * Obtiene el cliente para Tickets API
+   */
+  getTicketsClient(): AxiosInstance {
+    return this.ticketsApiClient
+  }
+
+  /**
+   * Obtiene el cliente para Reservations API (puerto 5010)
+   */
+  getReservationsClient(): AxiosInstance {
+    return this.reservationsApiClient
   }
 }
 

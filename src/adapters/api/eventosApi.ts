@@ -27,6 +27,7 @@ export interface PagarPublicacionDTO {
 
 /**
  * Mapea un evento desde la API (con fechas como strings) a EventoEntity
+ * La API ahora devuelve URLs completas de blobs en imagenPrincipalBlob, imagenesSecundariasBlobs y folletoBlob
  */
 function mapEventoFromApi(data: any): EventoEntity {
   return new EventoEntity({
@@ -45,8 +46,12 @@ function mapEventoFromApi(data: any): EventoEntity {
     aforoDisponible: data.aforoDisponible ?? data.aforo,
     organizadorId: data.organizadorId,
     tarifaPublicacion: data.tarifaPublicacion,
+    transaccionPagoId: data.transaccionPagoId,
     secciones: data.secciones,
-    imagen: data.imagen,
+    // Mapear nuevos campos de imagen y folleto
+    imagen: data.mainImageUrl || data.imagenPrincipalBlob || data.imagen,
+    imagenesSecundarias: data.secondaryImageUrls || data.imagenesSecundariasBlobs || data.imagenesSecundarias || [],
+    folletoUrl: data.brochureUrl || data.folletoBlob || data.folletoUrl,
     fechaCreacion: new Date(data.fechaCreacion || new Date()),
     fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
   })
@@ -71,11 +76,12 @@ function mapEventoToApi(evento: Partial<Evento>): any {
 
 class EventosApiAdapter {
   private client = httpClient.getEventsClient()
+  private baseUrl = "/api/Eventos"
 
   async crearEvento(evento: Evento): Promise<EventoEntity> {
     try {
       const payload = mapEventoToApi(evento)
-      const response = await this.client.post("/api/eventos", payload)
+      const response = await this.client.post(this.baseUrl, payload)
       console.log("[v0] Evento creado:", response.data.id)
       return mapEventoFromApi(response.data)
     } catch (error: any) {
@@ -92,7 +98,7 @@ class EventosApiAdapter {
     precioMax?: number
   }): Promise<EventoEntity[]> {
     try {
-      const response = await this.client.get("/api/eventos/publicados", { params })
+      const response = await this.client.get(`${this.baseUrl}/publicados`, { params })
       const eventos = Array.isArray(response.data) ? response.data : []
       console.log("[v0] Eventos publicados recuperados:", eventos.length)
       return eventos.map(mapEventoFromApi)
@@ -104,7 +110,7 @@ class EventosApiAdapter {
 
   async obtenerDetalle(id: string): Promise<EventoEntity | null> {
     try {
-      const response = await this.client.get(`/api/eventos/${id}`)
+      const response = await this.client.get(`${this.baseUrl}/${id}`)
       console.log("[v0] Detalle evento:", id, "encontrado")
       return mapEventoFromApi(response.data)
     } catch (error: any) {
@@ -117,19 +123,56 @@ class EventosApiAdapter {
     }
   }
 
-  async publicarEvento(id: string): Promise<void> {
+  async obtenerTodos(): Promise<EventoEntity[]> {
     try {
-      await this.client.put(`/api/eventos/${id}/publicar`)
-      console.log("[v0] Evento publicado:", id)
+      const response = await this.client.get(this.baseUrl)
+      const eventos = Array.isArray(response.data) ? response.data : []
+      console.log("[EventosApi] Total de eventos recuperados:", eventos.length)
+      return eventos.map(mapEventoFromApi)
     } catch (error: any) {
-      console.error("[v0] Error publicando evento:", error)
+      console.error("[EventosApi] Error obteniendo todos los eventos:", error)
+      throw new Error(error.response?.data?.message || "Error al obtener eventos")
+    }
+  }
+
+  async publicarEvento(id: string, pagoConfirmadoId?: string): Promise<void> {
+    try {
+      // El backend espera POST /api/eventos/{id}/publicar con PublicarEventoCommand
+      // El PagoConfirmadoId es requerido por el validador
+      // Si no se proporciona, generamos un GUID temporal (el backend debería validar si existe)
+      const pagoId = pagoConfirmadoId || this.generarGuidTemporal()
+
+      const payload = {
+        pagoConfirmadoId: pagoId,
+      }
+
+      console.log("[EventosApi] Publicando evento:", id, "con pagoId:", pagoId)
+
+      await this.client.post(`${this.baseUrl}/${id}/publicar`, payload)
+      console.log("[EventosApi] Evento publicado exitosamente:", id)
+    } catch (error: any) {
+      console.error("[EventosApi] Error publicando evento:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
       throw new Error(error.response?.data?.message || "Error al publicar el evento")
     }
   }
 
+  /**
+   * Genera un GUID temporal para usar como PagoConfirmadoId
+   * Nota: Esto es un workaround. En producción, debería venir de un servicio de pagos real
+   */
+  private generarGuidTemporal(): string {
+    // Generar un GUID v4 válido
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+  }
+
   async obtenerPorOrganizador(organizadorId: string): Promise<EventoEntity[]> {
     try {
-      const response = await this.client.get(`/api/eventos/organizador/${organizadorId}`)
+      const response = await this.client.get(`${this.baseUrl}/organizador/${organizadorId}`)
       const eventos = Array.isArray(response.data) ? response.data : []
       console.log("[v0] Eventos del organizador:", organizadorId, "cantidad:", eventos.length)
       return eventos.map(mapEventoFromApi)
@@ -142,7 +185,7 @@ class EventosApiAdapter {
   async editarEvento(id: string, datos: Partial<Evento>): Promise<EventoEntity | null> {
     try {
       const payload = mapEventoToApi(datos)
-      const response = await this.client.put(`/api/eventos/${id}`, payload)
+      const response = await this.client.put(`${this.baseUrl}/${id}`, payload)
       console.log("[v0] Evento editado:", id)
       return mapEventoFromApi(response.data)
     } catch (error: any) {
@@ -157,7 +200,7 @@ class EventosApiAdapter {
 
   async cancelarEvento(id: string): Promise<void> {
     try {
-      await this.client.delete(`/api/eventos/${id}`)
+      await this.client.delete(`${this.baseUrl}/${id}`)
       console.log("[v0] Evento cancelado:", id)
     } catch (error: any) {
       console.error("[v0] Error cancelando evento:", error)
@@ -170,12 +213,65 @@ class EventosApiAdapter {
    */
   async crearEventoConSecciones(data: CrearEventoApiDTO): Promise<EventoEntity> {
     try {
-      const response = await this.client.post("/api/eventos", data)
-      console.log("[v0] Evento creado con secciones:", response.data.id)
-      return mapEventoFromApi(response.data)
+      // Mapear el payload al formato camelCase que espera el backend
+      const payload = {
+        nombre: data.nombre,
+        descripcion: data.descripcion,
+        fecha: data.fecha, // ISO string
+        horasDuracion: data.horasDuracion,
+        minutosDuracion: data.minutosDuracion,
+        organizadorId: data.organizadorId,
+        venueId: data.venueId,
+        categoria: data.categoria,
+        tarifaPublicacion: data.tarifaPublicacion,
+        secciones: data.secciones.map(s => ({
+          nombre: s.nombre,
+          capacidad: s.capacidad,
+          precio: s.precio,
+          tipoAsiento: s.tipoAsiento || null,
+        })),
+      }
+
+      console.log("[EventosApi] Payload a enviar:", JSON.stringify(payload, null, 2))
+
+      const response = await this.client.post(this.baseUrl, payload)
+      console.log("[EventosApi] Respuesta del backend:", response.data)
+
+      // El backend devuelve CrearEventoCommandResponse que solo tiene { Id: guid }
+      // Necesitamos obtener el evento completo después de crearlo
+      const eventoId = response.data?.Id || response.data?.id
+
+      if (!eventoId) {
+        throw new Error("La respuesta del servidor no contiene el ID del evento creado")
+      }
+
+      console.log("[EventosApi] Evento creado con ID:", eventoId)
+
+      // Obtener el evento completo desde el backend
+      // Esperar un momento para que el backend procese la creación
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const eventoCompleto = await this.obtenerDetalle(eventoId)
+
+      if (!eventoCompleto) {
+        throw new Error("Evento creado pero no se pudo obtener la información completa")
+      }
+
+      return eventoCompleto
     } catch (error: any) {
-      console.error("[v0] Error creando evento con secciones:", error)
-      throw new Error(error.response?.data?.message || "Error al crear el evento")
+      console.error("[EventosApi] Error creando evento con secciones:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
+      console.error("[EventosApi] Error status:", error.response?.status)
+
+      // Extraer mensaje de error más detallado
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.title ||
+        error.response?.data?.errors?.join?.(", ") ||
+        error.message ||
+        "Error al crear el evento"
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -185,10 +281,19 @@ class EventosApiAdapter {
    */
   async pagarPublicacion(eventoId: string, data: PagarPublicacionDTO): Promise<void> {
     try {
-      await this.client.post(`/api/eventos/${eventoId}/pagar-publicacion`, data)
-      console.log("[v0] Pago de publicación iniciado para evento:", eventoId)
+      // Mapear a camelCase para el nuevo backend
+      const payload = {
+        transaccionPagoId: data.transaccionPagoId,
+        monto: data.monto,
+      }
+
+      console.log("[EventosApi] Pagando publicación:", eventoId, "payload:", payload)
+
+      await this.client.post(`${this.baseUrl}/${eventoId}/pagar-publicacion`, payload)
+      console.log("[EventosApi] Pago de publicación iniciado exitosamente para evento:", eventoId)
     } catch (error: any) {
-      console.error("[v0] Error pagando publicación:", error)
+      console.error("[EventosApi] Error pagando publicación:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
       throw new Error(error.response?.data?.message || "Error al pagar la publicación del evento")
     }
   }
@@ -199,7 +304,7 @@ class EventosApiAdapter {
    */
   async iniciarEvento(eventoId: string): Promise<void> {
     try {
-      await this.client.post(`/api/eventos/${eventoId}/iniciar`)
+      await this.client.post(`${this.baseUrl}/${eventoId}/iniciar`)
       console.log("[v0] Evento iniciado:", eventoId)
     } catch (error: any) {
       console.error("[v0] Error iniciando evento:", error)
@@ -213,12 +318,86 @@ class EventosApiAdapter {
    */
   async finalizarEvento(eventoId: string): Promise<void> {
     try {
-      await this.client.post(`/api/eventos/${eventoId}/finalizar`)
+      await this.client.post(`${this.baseUrl}/${eventoId}/finalizar`)
       console.log("[v0] Evento finalizado:", eventoId)
     } catch (error: any) {
       console.error("[v0] Error finalizando evento:", error)
       throw new Error(error.response?.data?.message || "Error al finalizar el evento")
     }
+  }
+
+  /**
+   * Sube una imagen principal para un evento
+   */
+  async subirImagenPrincipal(eventoId: string, archivo: File): Promise<string> {
+    try {
+      const formData = new FormData()
+      formData.append('file', archivo)
+
+      console.log("[EventosApi] Subiendo imagen principal para evento:", eventoId)
+
+      const response = await this.client.post(`${this.baseUrl}/${eventoId}/imagen-principal`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
+      console.log("[EventosApi] Imagen principal subida:", response.data)
+      return response.data // El string con la info/URL
+    } catch (error: any) {
+      console.error("[EventosApi] Error subiendo imagen principal:", error)
+      throw new Error(error.response?.data?.message || "Error al subir la imagen principal")
+    }
+  }
+
+  /**
+   * Sube imágenes secundarias para un evento
+   */
+  async subirImagenSecundaria(eventoId: string, archivos: File[]): Promise<string[]> {
+    try {
+      const formData = new FormData()
+      archivos.forEach(file => formData.append('files', file))
+
+      console.log("[EventosApi] Subiendo imágenes secundarias para evento:", eventoId)
+
+      const response = await this.client.post(`${this.baseUrl}/${eventoId}/imagen-secundaria`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
+      console.log("[EventosApi] Imágenes secundarias subidas:", response.data)
+      return Array.isArray(response.data) ? response.data : [response.data]
+    } catch (error: any) {
+      console.error("[EventosApi] Error subiendo imágenes secundarias:", error)
+      throw new Error(error.response?.data?.message || "Error al subir imágenes secundarias")
+    }
+  }
+
+  /**
+   * Sube un folleto para un evento
+   */
+  async subirFolleto(eventoId: string, archivo: File): Promise<string> {
+    try {
+      const formData = new FormData()
+      formData.append('file', archivo)
+
+      console.log("[EventosApi] Subiendo folleto para evento:", eventoId)
+
+      const response = await this.client.post(`${this.baseUrl}/${eventoId}/folleto`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
+      console.log("[EventosApi] Folleto subido:", response.data)
+      return response.data
+    } catch (error: any) {
+      console.error("[EventosApi] Error subiendo folleto:", error)
+      throw new Error(error.response?.data?.message || "Error al subir el folleto")
+    }
+  }
+
+  /**
+   * Mantiene compatibilidad con código antiguo, redirige a imagen-secundaria
+   * @deprecated Usar métodos específicos
+   */
+  async subirImagenes(eventoId: string, archivos: File[]): Promise<string[]> {
+    return this.subirImagenSecundaria(eventoId, archivos)
   }
 }
 

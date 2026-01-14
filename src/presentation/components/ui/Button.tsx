@@ -27,10 +27,10 @@ export default function Button({
     "font-medium rounded-md transition-colors duration-200 inline-flex items-center gap-2 justify-center"
 
   const variantClasses = {
-    primary: "bg-primary text-white hover:bg-primary-dark disabled:bg-gray-300",
-    secondary: "bg-secondary text-text-primary hover:bg-opacity-90 disabled:bg-gray-300",
-    danger: "bg-danger text-white hover:opacity-90 disabled:opacity-50",
-    outline: "border-2 border-primary text-primary hover:bg-primary hover:text-white disabled:opacity-50",
+    primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed",
+    secondary: "bg-gray-200 text-gray-900 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed",
+    danger: "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed",
+    outline: "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed",
   }
 
   const sizeClasses = {

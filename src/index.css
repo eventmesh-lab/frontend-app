@@ -3,6 +3,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Forzar modo claro - prevenir que el navegador aplique modo oscuro */
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  color-scheme: light;
+  background-color: white;
+  color: inherit;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

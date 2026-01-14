@@ -51,17 +51,33 @@ export const keycloakConfig = {
   url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180',
   
   /** Realm de Keycloak */
-  realm: import.meta.env.VITE_KEYCLOAK_REALM || 'myrealm',
+  realm: 'myrealm',
   
   /** Client ID de la aplicación */
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'aspnetcore',
+  clientId:  'aspnetcore',
   
   /** Client Secret de la aplicación */
-  clientSecret: import.meta.env.VITE_KEYCLOAK_CLIENT_SECRET || '',
+    clientSecret: 'PzaioIxlVKVINnJ7VJwCILdBoUlUWB05',
   
   /** URL del endpoint de token */
   get tokenUrl() {
     return `${this.url}/realms/${this.realm}/protocol/openid-connect/token`
+  }
+}
+
+/**
+ * Configuración de la API de Tickets
+ */
+export const ticketsConfig = {
+  /** URL base del servicio de tickets */
+  baseUrl: import.meta.env.VITE_TICKETS_API_URL || 'http://localhost:5005',
+  
+  /** Endpoints específicos de tickets */
+  tickets: {
+    generar: '/api/tickets/generar',
+    confirmar: '/api/tickets/confirmar',
+    validar: '/api/tickets/validar',
+    cancelar: '/api/tickets/cancelar',
   }
 }
 
@@ -79,6 +95,7 @@ export const signalRConfig = {
 export const config = {
   api: apiConfig,
   events: eventsConfig,
+  tickets: ticketsConfig,
   keycloak: keycloakConfig,
   signalR: signalRConfig,
 }

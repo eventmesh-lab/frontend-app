@@ -44,6 +44,10 @@ interface UseEventosReturn {
   obtenerMisEventos: (organizadorId: string) => Promise<void>
   editarEvento: (eventoId: string, datos: EditarEventoDTO) => Promise<void>
   cancelarEvento: (eventoId: string) => Promise<void>
+  subirImagenes: (eventoId: string, archivos: File[]) => Promise<string[]>
+  subirImagenPrincipal: (eventoId: string, archivo: File) => Promise<string>
+  subirImagenSecundaria: (eventoId: string, archivos: File[]) => Promise<string[]>
+  subirFolleto: (eventoId: string, archivo: File) => Promise<string>
   limpiar: () => void
 }
 
@@ -223,6 +227,62 @@ export function useEventos(): UseEventosReturn {
     setError(null)
   }, [])
 
+  const subirImagenes = useCallback(async (eventoId: string, archivos: File[]): Promise<string[]> => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const urls = await eventosApi.subirImagenes(eventoId, archivos)
+      return urls
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error subiendo imágenes")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const subirImagenPrincipal = useCallback(async (eventoId: string, archivo: File): Promise<string> => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const url = await eventosApi.subirImagenPrincipal(eventoId, archivo)
+      return url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error subiendo imagen principal")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const subirImagenSecundaria = useCallback(async (eventoId: string, archivos: File[]): Promise<string[]> => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const urls = await eventosApi.subirImagenSecundaria(eventoId, archivos)
+      return urls
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error subiendo imágenes secundarias")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const subirFolleto = useCallback(async (eventoId: string, archivo: File): Promise<string> => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const url = await eventosApi.subirFolleto(eventoId, archivo)
+      return url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error subiendo folleto")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     eventos,
     eventoDetalle,
@@ -240,5 +300,9 @@ export function useEventos(): UseEventosReturn {
     editarEvento,
     cancelarEvento,
     limpiar,
+    subirImagenes,
+    subirImagenPrincipal,
+    subirImagenSecundaria,
+    subirFolleto,
   }
 }

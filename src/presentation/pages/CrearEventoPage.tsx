@@ -1,9 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import useAuth from "../contexts/Auth"
+import { useNotifications } from "../contexts/NotificationContext"
+import { NotificationEventType } from "../../adapters/signalr/notificationHub"
 import { useEventos, type CrearEventoConSeccionesDTO } from "../hooks/useEventos"
+import { getUserIdFromEmail } from "../../utils/userIdHelper"
+import { venuesService } from "../../application/services/venuesService"
 import OrganizadorLayout from "../layouts/OrganizadorLayout"
 import Card from "../components/ui/Card"
 import Button from "../components/ui/Button"
@@ -11,6 +15,7 @@ import Input from "../components/ui/Input"
 import FormField from "../components/ui/FormField"
 import Alert from "../components/ui/Alert"
 import type { SeccionEvento, TipoAsiento } from "../../domain/entities/Evento"
+import type { Venue } from "../../domain/entities/Venue"
 
 /**
  * Categorías disponibles para los eventos
@@ -49,8 +54,12 @@ const crearSeccionVacia = (): SeccionEvento => ({
  */
 export default function CrearEventoPage() {
   const navigate = useNavigate()
-  const { username } = useAuth() // username = email del usuario (solución temporal como organizadorId)
+  const { username, isAuthenticated } = useAuth() // username = email del usuario
   const { crearEventoConSecciones, isLoading, error } = useEventos()
+  const { agregarNotificacion } = useNotifications()
+
+  // Estado de venues
+  const [venues, setVenues] = useState<Venue[]>([])
 
   // Estado del formulario
   const [formData, setFormData] = useState({
@@ -61,7 +70,6 @@ export default function CrearEventoPage() {
     minutosDuracion: 0,
     venueId: "",
     categoria: "",
-    tarifaPublicacion: 50,
   })
 
   // Estado de las secciones (al menos una requerida)
@@ -70,6 +78,44 @@ export default function CrearEventoPage() {
   // Estado de errores de validación
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Cargar venues al montar el componente
+  useEffect(() => {
+    const cargarVenues = () => {
+      try {
+        const todosVenues = venuesService.obtenerTodos()
+        setVenues(todosVenues)
+      } catch (err) {
+        console.error("[CrearEvento] Error cargando venues:", err)
+      }
+    }
+    cargarVenues()
+  }, [])
+
+  /**
+   * Calcula la tarifa de publicación automáticamente
+   * Fórmula: $100 (base) + 0.1% de (precio × 60% de capacidad) por cada sección
+   */
+  const calcularTarifaPublicacion = (): number => {
+    const COSTO_BASE = 100
+    const PORCENTAJE_ENTRADAS = 0.6 // 60% del total de entradas
+    const PORCENTAJE_TARIFA = 0.001 // 0.1%
+
+    // Calcular: Σ(precio_sección × capacidad_sección × 0.6) para cada sección
+    const totalEntradasEstimadas = secciones.reduce((sum, seccion) => {
+      const entradasEstimadas = seccion.capacidad * PORCENTAJE_ENTRADAS
+      return sum + (seccion.precio * entradasEstimadas)
+    }, 0)
+
+    // Aplicar 0.1% sobre el total
+    const tarifaVariable = totalEntradasEstimadas * PORCENTAJE_TARIFA
+
+    // Sumar costo base
+    const tarifaTotal = COSTO_BASE + tarifaVariable
+
+    // Redondear a 2 decimales
+    return Math.round(tarifaTotal * 100) / 100
+  }
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
   /**
@@ -139,14 +185,17 @@ export default function CrearEventoPage() {
 
     if (!formData.venueId.trim()) {
       nuevosErrores.venueId = "El lugar es requerido"
+    } else {
+      // Validar que venueId sea uno de los venues cargados desde el servicio
+      const venueExiste = venues.some(v => v.id === formData.venueId.trim())
+      if (!venueExiste) {
+        nuevosErrores.venueId = "Debes seleccionar un lugar válido de la lista"
+        console.warn("[CrearEvento] VenueId no encontrado en la lista:", formData.venueId)
+      }
     }
 
     if (!formData.categoria) {
       nuevosErrores.categoria = "La categoría es requerida"
-    }
-
-    if (formData.tarifaPublicacion < 0) {
-      nuevosErrores.tarifaPublicacion = "La tarifa no puede ser negativa"
     }
 
     // Validar secciones
@@ -163,6 +212,9 @@ export default function CrearEventoPage() {
     })
 
     setErrores(nuevosErrores)
+    if (Object.keys(nuevosErrores).length > 0) {
+      console.warn("[CrearEvento] Errores de validación encontrados:", nuevosErrores)
+    }
     return Object.keys(nuevosErrores).length === 0
   }
 
@@ -175,38 +227,94 @@ export default function CrearEventoPage() {
     setSubmitSuccess(false)
 
     if (!validarFormulario()) {
+      setSubmitError("Por favor, corrige los errores en el formulario antes de continuar.")
+      console.warn("[CrearEvento] Validación fallida:", errores)
+
+      // Scroll to top to show the error alert
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
-    if (!username) {
+    if (!username || !isAuthenticated) {
       setSubmitError("Debes estar autenticado para crear un evento")
       return
     }
 
     try {
+      // Convertir el email a GUID determinístico para usar como organizadorId
+      const organizadorId = getUserIdFromEmail(username)
+      console.log("[CrearEvento] Creando evento para organizador:", organizadorId, "(email:", username, ")")
+
+      // Calcular tarifa de publicación automáticamente
+      const tarifaPublicacion = calcularTarifaPublicacion()
+
       const datos: CrearEventoConSeccionesDTO = {
         nombre: formData.nombre,
         descripcion: formData.descripcion,
         fecha: new Date(formData.fecha),
         horasDuracion: formData.horasDuracion,
         minutosDuracion: formData.minutosDuracion,
-        // TODO: Reemplazar con ID real cuando se implemente
-        organizadorId: username, // Usando email como ID temporal
+        organizadorId: organizadorId, // GUID generado desde el email
         venueId: formData.venueId,
         categoria: formData.categoria,
-        tarifaPublicacion: formData.tarifaPublicacion,
-        secciones: secciones,
+        tarifaPublicacion: tarifaPublicacion,
+        secciones: secciones.map(s => ({
+          nombre: s.nombre,
+          capacidad: s.capacidad,
+          precio: s.precio,
+          tipoAsiento: s.tipoAsiento,
+        })),
       }
 
-      await crearEventoConSecciones(datos)
+      console.log("[CrearEvento] Payload a enviar:", JSON.stringify({
+        ...datos,
+        fecha: datos.fecha.toISOString(),
+      }, null, 2))
+
+      const eventoCreado = await crearEventoConSecciones(datos)
+      console.log("[CrearEvento] Evento creado exitosamente:", eventoCreado)
+
+      // Mostrar mensaje de éxito
       setSubmitSuccess(true)
-      
-      // Redirigir al dashboard después de 2 segundos
+      setSubmitError(null)
+
+      // Agregar notificación de éxito
+      agregarNotificacion(
+        NotificationEventType.SISTEMA,
+        "Evento creado exitosamente",
+        `El evento "${eventoCreado.nombre}" ha sido creado correctamente. Está en estado Borrador y listo para publicar.`,
+        { eventoId: eventoCreado.id, eventoNombre: eventoCreado.nombre }
+      )
+
+      // Redirigir al dashboard después de 3 segundos (dar tiempo para ver el mensaje)
       setTimeout(() => {
         navigate("/organizador")
-      }, 2000)
+      }, 3000)
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Error al crear el evento")
+      console.error("[CrearEvento] Error al crear evento:", err)
+
+      // Extraer mensaje de error de forma más robusta
+      let errorMessage = "Error al crear el evento"
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'string') {
+        errorMessage = err
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String(err.message)
+      }
+
+      setSubmitError(errorMessage)
+      setSubmitSuccess(false)
+
+      // Agregar notificación de error
+      agregarNotificacion(
+        NotificationEventType.SISTEMA,
+        "Error al crear evento",
+        errorMessage,
+        { error: errorMessage }
+      )
+
+      // No redirigir si hay error, dejar que el usuario vea el mensaje
     }
   }
 
@@ -221,14 +329,33 @@ export default function CrearEventoPage() {
         </div>
 
         {submitSuccess && (
-          <Alert type="success" className="mb-6">
-            ¡Evento creado exitosamente! Redirigiendo al dashboard...
+          <Alert
+            type="success"
+            title="¡Éxito!"
+            className="mb-6"
+            onClose={() => setSubmitSuccess(false)}
+          >
+            <div>
+              <p className="font-semibold mb-2">¡Evento creado exitosamente!</p>
+              <p className="text-sm">El evento ha sido guardado en estado Borrador. Serás redirigido al dashboard en unos segundos...</p>
+            </div>
           </Alert>
         )}
 
         {(submitError || error) && (
-          <Alert type="error" className="mb-6">
-            {submitError || error}
+          <Alert
+            type="error"
+            title="Error al crear evento"
+            className="mb-6"
+            onClose={() => {
+              setSubmitError(null)
+            }}
+          >
+            <div>
+              <p className="font-semibold mb-1">No se pudo crear el evento:</p>
+              <p className="text-sm">{submitError || error}</p>
+              <p className="text-xs mt-2 opacity-75">Por favor, revisa la información e intenta nuevamente.</p>
+            </div>
           </Alert>
         )}
 
@@ -236,7 +363,7 @@ export default function CrearEventoPage() {
           {/* Información básica */}
           <Card className="mb-6">
             <h2 className="text-xl font-semibold text-text-primary mb-4">Información Básica</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <FormField label="Nombre del Evento" required error={errores.nombre}>
@@ -312,25 +439,25 @@ export default function CrearEventoPage() {
               </FormField>
 
               <FormField label="Lugar (Venue)" required error={errores.venueId}>
-                <Input
+                <select
                   name="venueId"
                   value={formData.venueId}
                   onChange={handleChange}
-                  placeholder="Ej: Teatro Principal, Estadio Central..."
-                  error={errores.venueId}
-                />
+                  className={`w-full px-3 py-2 border border-border rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${errores.venueId ? "border-danger" : ""
+                    }`}
+                >
+                  <option value="">Selecciona un lugar</option>
+                  {venues.map((venue) => (
+                    <option key={venue.id} value={venue.id}>
+                      {venue.nombre} - {venue.direccion}
+                    </option>
+                  ))}
+                </select>
+                {errores.venueId && (
+                  <p className="text-xs text-danger mt-1">{errores.venueId}</p>
+                )}
               </FormField>
 
-              <FormField label="Tarifa de Publicación ($)" error={errores.tarifaPublicacion}>
-                <Input
-                  type="number"
-                  name="tarifaPublicacion"
-                  value={formData.tarifaPublicacion}
-                  onChange={handleChange}
-                  min={0}
-                  error={errores.tarifaPublicacion}
-                />
-              </FormField>
             </div>
           </Card>
 
@@ -432,20 +559,41 @@ export default function CrearEventoPage() {
                 <p className="text-text-secondary text-sm">Rango de Precios</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-warning">${formData.tarifaPublicacion}</p>
-                <p className="text-text-secondary text-sm">Tarifa Publicación</p>
+                <p className="text-2xl font-bold text-warning">${calcularTarifaPublicacion().toFixed(2)}</p>
+                <p className="text-text-secondary text-sm">Tarifa Publicación*</p>
+                <p className="text-xs text-text-tertiary mt-1">
+                  *Calculada automáticamente: $100 base + 0.1% de ingresos estimados
+                </p>
               </div>
             </div>
           </Card>
 
-          {/* Botones de acción */}
-          <div className="flex gap-4 justify-end">
-            <Button type="button" variant="outline" onClick={() => navigate("/organizador")}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" loading={isLoading} disabled={isLoading}>
-              Crear Evento
-            </Button>
+          {/* Botones de acción - Siempre visible al final del formulario */}
+          <div className="mt-8 pt-6 border-t-2 border-border-light">
+            <div className="flex gap-4 justify-end items-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/organizador")}
+                disabled={isLoading}
+                size="lg"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={isLoading}
+                disabled={isLoading}
+                className="min-w-[180px] font-bold !bg-[#141414]"
+              >
+                {isLoading ? "Creando Evento..." : "✨ Crear Evento"}
+              </Button>
+            </div>
+            <p className="text-xs text-text-tertiary text-center mt-4">
+              Al crear el evento, estará en estado Borrador hasta que pagues la tarifa de publicación
+            </p>
           </div>
         </form>
       </div>

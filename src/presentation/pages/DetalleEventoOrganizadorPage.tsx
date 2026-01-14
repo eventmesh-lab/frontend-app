@@ -55,22 +55,33 @@ export default function DetalleEventoOrganizadorPage() {
     pagarPublicacion,
     iniciarEvento,
     finalizarEvento,
+    subirImagenes,
+    subirImagenPrincipal,
+    subirImagenSecundaria,
+    subirFolleto,
   } = useEventos()
 
   // Estado para modales
   const [showPagarModal, setShowPagarModal] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState<"iniciar" | "finalizar" | null>(null)
-  
+
   // Estado para el formulario de pago
   const [pagoData, setPagoData] = useState({
     transaccionPagoId: "",
     monto: 0,
   })
-  
+
   // Estado para feedback
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+
+  // Estado para carga de imágenes
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [selectedPrincipalFile, setSelectedPrincipalFile] = useState<File | null>(null)
+  const [selectedSecondaryFiles, setSelectedSecondaryFiles] = useState<File[]>([])
+  const [selectedBrochureFile, setSelectedBrochureFile] = useState<File | null>(null)
+  const [uploadingImages, setUploadingImages] = useState(false)
 
   // Cargar detalle del evento
   useEffect(() => {
@@ -105,7 +116,7 @@ export default function DetalleEventoOrganizadorPage() {
 
     setActionLoading(true)
     setActionError(null)
-    
+
     try {
       await pagarPublicacion(id, pagoData.transaccionPagoId, pagoData.monto)
       setActionSuccess("¡Pago de publicación iniciado exitosamente!")
@@ -127,7 +138,7 @@ export default function DetalleEventoOrganizadorPage() {
 
     setActionLoading(true)
     setActionError(null)
-    
+
     try {
       await iniciarEvento(id)
       setActionSuccess("¡Evento iniciado exitosamente!")
@@ -148,7 +159,7 @@ export default function DetalleEventoOrganizadorPage() {
 
     setActionLoading(true)
     setActionError(null)
-    
+
     try {
       await finalizarEvento(id)
       setActionSuccess("¡Evento finalizado exitosamente!")
@@ -173,6 +184,68 @@ export default function DetalleEventoOrganizadorPage() {
       hour: "2-digit",
       minute: "2-digit",
     })
+  }
+
+  /**
+   * Maneja la selección de archivos
+   */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      setSelectedFiles(Array.from(files))
+    }
+  }
+
+  /**
+   * Maneja la selección de imagen principal
+   */
+  const handlePrincipalFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedPrincipalFile(file)
+    }
+  }
+
+  /**
+   * Maneja la selección de imágenes secundarias
+   */
+  const handleSecondaryFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      setSelectedSecondaryFiles(Array.from(files))
+    }
+  }
+
+  /**
+   * Maneja la selección de folleto
+   */
+  const handleBrochureFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedBrochureFile(file)
+    }
+  }
+
+  /**
+   * Maneja la subida de imágenes
+   */
+  const handleUploadImages = async () => {
+    if (!id || selectedFiles.length === 0) return
+
+    setUploadingImages(true)
+    setActionError(null)
+
+    try {
+      await subirImagenes(id, selectedFiles)
+      setActionSuccess(`¡${selectedFiles.length} imagen(es) subida(s) exitosamente!`)
+      setSelectedFiles([])
+      // Recargar detalle para obtener las nuevas imágenes
+      await obtenerDetalle(id)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Error al subir imágenes")
+    } finally {
+      setUploadingImages(false)
+    }
   }
 
   if (isLoading) {
@@ -232,13 +305,24 @@ export default function DetalleEventoOrganizadorPage() {
         {/* Acciones según estado */}
         <Card className="mb-6">
           <h2 className="text-xl font-semibold text-text-primary mb-4">Acciones</h2>
-          
+
           {eventoDetalle.estado === EstadoEvento.BORRADOR && (
             <div className="flex flex-col gap-3">
               <p className="text-text-secondary mb-2">
                 Tu evento está en borrador. Para publicarlo, debes pagar la tarifa de publicación.
               </p>
-              <Button variant="primary" onClick={() => setShowPagarModal(true)}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Generar transaccionPagoId automáticamente al abrir el modal
+                  const uuid = crypto.randomUUID()
+                  setPagoData({
+                    transaccionPagoId: uuid,
+                    monto: eventoDetalle.tarifaPublicacion || 0,
+                  })
+                  setShowPagarModal(true)
+                }}
+              >
                 💳 Pagar Publicación (${eventoDetalle.tarifaPublicacion || 0})
               </Button>
             </div>
@@ -260,11 +344,15 @@ export default function DetalleEventoOrganizadorPage() {
               <p className="text-text-secondary mb-2">
                 Tu evento está publicado y visible para los asistentes. Cuando llegue el momento, puedes marcarlo como iniciado.
               </p>
-              <Button variant="primary" onClick={() => setShowConfirmModal("iniciar")}>
+              <Button
+                variant="primary"
+                onClick={() => setShowConfirmModal("iniciar")}
+              >
                 ▶️ Iniciar Evento
               </Button>
             </div>
           )}
+
 
           {eventoDetalle.estado === EstadoEvento.EN_CURSO && (
             <div className="flex flex-col gap-3">
@@ -290,10 +378,163 @@ export default function DetalleEventoOrganizadorPage() {
           )}
         </Card>
 
+        {/* Gestión de Imágenes */}
+        <Card className="mb-6">
+          <h2 className="text-xl font-semibold text-text-primary mb-4">🖼️ Imágenes del Evento</h2>
+
+          {/* Imágenes existentes */}
+          {eventoDetalle.imagen && (
+            <div className="mb-6">
+              <h3 className="font-medium text-text-tertiary text-sm mb-2">Imagen Principal</h3>
+              <img
+                src={eventoDetalle.imagen}
+                alt={eventoDetalle.nombre}
+                className="w-full max-w-md h-48 object-cover rounded-lg border border-border"
+              />
+            </div>
+          )}
+
+          {eventoDetalle.imagenesSecundarias && eventoDetalle.imagenesSecundarias.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-medium text-text-tertiary text-sm mb-2">Imágenes Secundarias</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {eventoDetalle.imagenesSecundarias.map((url, index) => (
+                  <img
+                    key={index}
+                    src={url}
+                    alt={`${eventoDetalle.nombre} - ${index + 1}`}
+                    className="w-full h-32 object-cover rounded-lg border border-border"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subir nuevas imágenes - Tres secciones separadas */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Gestionar Imágenes del Evento</h3>
+            <p className="text-sm text-gray-600 mb-6">Sube imágenes para tu evento en las categorías correspondientes</p>
+
+            {/* Nota: Por ahora, el backend maneja todas las imágenes de la misma forma */}
+            <div className="space-y-6">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-gray-900 mb-2">🇺 Imagen Principal</h4>
+                <p className="text-sm text-gray-600 mb-3">La imagen principal se mostrará como portada del evento</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePrincipalFileSelect}
+                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer"
+                />
+                {selectedPrincipalFile && (
+                  <div className="mt-3 flex gap-3 items-start">
+                    <img src={URL.createObjectURL(selectedPrincipalFile)} alt="Preview" className="w-24 h-24 object-cover rounded-md border-2 border-blue-300" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{selectedPrincipalFile.name}</p>
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" onClick={async () => {
+                          if (!id) return
+                          setUploadingImages(true)
+                          try {
+                            await subirImagenPrincipal(id, selectedPrincipalFile)
+                            setActionSuccess("¡Imagen principal subida!")
+                            setSelectedPrincipalFile(null)
+                            await obtenerDetalle(id)
+                          } catch (err) {
+                            setActionError(err instanceof Error ? err.message : "Error")
+                          } finally {
+                            setUploadingImages(false)
+                          }
+                        }} loading={uploadingImages}>💾 Subir</Button>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedPrincipalFile(null)}>Cancelar</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <h4 className="font-semibold text-gray-900 mb-2">🖼️ Imágenes Secundarias</h4>
+                <p className="text-sm text-gray-600 mb-3">Sube múltiples imágenes adicionales para la galería</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleSecondaryFilesSelect}
+                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-green-600 file:text-white hover:file:bg-green-700 file:cursor-pointer"
+                />
+                {selectedSecondaryFiles.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm mb-2">{selectedSecondaryFiles.length} imagen(es)</p>
+                    <div className="grid grid-cols-4 gap-2 mb-3">
+                      {selectedSecondaryFiles.map((file, i) => (
+                        <img key={i} src={URL.createObjectURL(file)} alt={file.name} className="w-full h-20 object-cover rounded-md" />
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={async () => {
+                        if (!id) return
+                        setUploadingImages(true)
+                        try {
+                          await subirImagenSecundaria(id, selectedSecondaryFiles)
+                          setActionSuccess(`¡${selectedSecondaryFiles.length} imagen(es) subidas!`)
+                          setSelectedSecondaryFiles([])
+                          await obtenerDetalle(id)
+                        } catch (err) {
+                          setActionError(err instanceof Error ? err.message : "Error")
+                        } finally {
+                          setUploadingImages(false)
+                        }
+                      }} loading={uploadingImages}>💾 Subir</Button>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedSecondaryFiles([])}>Cancelar</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-semibold text-gray-900 mb-2">📄 Folleto del Evento</h4>
+                <p className="text-sm text-gray-600 mb-3">Sube un documento PDF o imagen del folleto</p>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={handleBrochureFileSelect}
+                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-purple-600 file:text-white hover:file:bg-purple-700 file:cursor-pointer"
+                />
+                {selectedBrochureFile && (
+                  <div className="mt-3 flex gap-3 items-center p-3 bg-white rounded-md">
+                    <div className="text-3xl">📄</div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{selectedBrochureFile.name}</p>
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" onClick={async () => {
+                          if (!id) return
+                          setUploadingImages(true)
+                          try {
+                            await subirFolleto(id, selectedBrochureFile)
+                            setActionSuccess("¡Folleto subido!")
+                            setSelectedBrochureFile(null)
+                            await obtenerDetalle(id)
+                          } catch (err) {
+                            setActionError(err instanceof Error ? err.message : "Error")
+                          } finally {
+                            setUploadingImages(false)
+                          }
+                        }} loading={uploadingImages}>💾 Subir</Button>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedBrochureFile(null)}>Cancelar</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Información del evento */}
         <Card className="mb-6">
           <h2 className="text-xl font-semibold text-text-primary mb-4">Información del Evento</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="font-medium text-text-tertiary text-sm mb-1">Descripción</h3>
@@ -330,38 +571,40 @@ export default function DetalleEventoOrganizadorPage() {
         </Card>
 
         {/* Secciones */}
-        {eventoDetalle.secciones && eventoDetalle.secciones.length > 0 && (
-          <Card className="mb-6">
-            <h2 className="text-xl font-semibold text-text-primary mb-4">Secciones</h2>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-text-tertiary font-medium">Nombre</th>
-                    <th className="text-left py-3 px-4 text-text-tertiary font-medium">Capacidad</th>
-                    <th className="text-left py-3 px-4 text-text-tertiary font-medium">Precio</th>
-                    <th className="text-left py-3 px-4 text-text-tertiary font-medium">Tipo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eventoDetalle.secciones.map((seccion, index) => (
-                    <tr key={index} className="border-b border-border last:border-0">
-                      <td className="py-3 px-4 text-text-primary font-medium">{seccion.nombre}</td>
-                      <td className="py-3 px-4 text-text-primary">{seccion.capacidad}</td>
-                      <td className="py-3 px-4 text-text-primary">${seccion.precio}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={seccion.tipoAsiento === "VIP" ? "warning" : "default"}>
-                          {seccion.tipoAsiento}
-                        </Badge>
-                      </td>
+        {
+          eventoDetalle.secciones && eventoDetalle.secciones.length > 0 && (
+            <Card className="mb-6">
+              <h2 className="text-xl font-semibold text-text-primary mb-4">Secciones</h2>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4 text-text-tertiary font-medium">Nombre</th>
+                      <th className="text-left py-3 px-4 text-text-tertiary font-medium">Capacidad</th>
+                      <th className="text-left py-3 px-4 text-text-tertiary font-medium">Precio</th>
+                      <th className="text-left py-3 px-4 text-text-tertiary font-medium">Tipo</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
+                  </thead>
+                  <tbody>
+                    {eventoDetalle.secciones.map((seccion, index) => (
+                      <tr key={index} className="border-b border-border last:border-0">
+                        <td className="py-3 px-4 text-text-primary font-medium">{seccion.nombre}</td>
+                        <td className="py-3 px-4 text-text-primary">{seccion.capacidad}</td>
+                        <td className="py-3 px-4 text-text-primary">${seccion.precio}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={seccion.tipoAsiento === "VIP" ? "warning" : "default"}>
+                            {seccion.tipoAsiento}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )
+        }
 
         {/* Modal de Pago */}
         <Modal
@@ -441,8 +684,8 @@ export default function DetalleEventoOrganizadorPage() {
             </div>
           </div>
         </Modal>
-      </div>
-    </OrganizadorLayout>
+      </div >
+    </OrganizadorLayout >
   )
 }
 

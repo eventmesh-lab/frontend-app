@@ -11,21 +11,37 @@ import EventosPage from "./presentation/pages/EventosPage"
 import DetalleEventoPage from "./presentation/pages/DetalleEventoPage"
 import MisReservasPage from "./presentation/pages/MisReservasPage"
 import OrganizadorDashboardPage from "./presentation/pages/OrganizadorDashboardPage"
+import MisEventosOrganizadorPage from "./presentation/pages/MisEventosOrganizadorPage"
 import CrearEventoPage from "./presentation/pages/CrearEventoPage"
 import DetalleEventoOrganizadorPage from "./presentation/pages/DetalleEventoOrganizadorPage"
 import AdminDashboardPage from "./presentation/pages/AdminDashboardPage"
+import AdminEventosPage from "./presentation/pages/AdminEventosPage"
+import AdminVenuesPage from "./presentation/pages/AdminVenuesPage"
 import ProfileUserPage from "./presentation/pages/ProfileUserPage"
 import ChangePasswordPage from "./presentation/pages/ChangePasswordPage"
 import UserDetailPage from "./presentation/pages/UserDetailPage"
 import UserByAdminPage from "./presentation/pages/UserByAdminPage"
 import RegisterUserOrganizerPage from "./presentation/pages/RegisterUserOrganizerPage"
 import UpdateUserPage from "./presentation/pages/UpdateUserPage"
+import PagoPage from "./presentation/pages/PagoPage"
+import React from 'react';
+import { Toaster } from 'react-hot-toast'; 
+import { useSignalR } from './presentation/hooks/useSignalR';
+import GenerarNuevoCupon from "./presentation/pages/GenerarNuevoCupon" 
+import SurveysPage from "./presentation/pages/MisEncuestasPage"
+import AnswerSurveyPage from "./presentation/pages/ResponderEncuestaPage"
+import RespuestasEncuestasPage from "./presentation/pages/RespuestasEncuestasPage"
 
+const SignalRHandler = () => {
+    useSignalR(); // Conecta a SignalR
+    return <Toaster position="top-right" />; // Muestra las burbujas
+};
 function App() {
     return (
         <Router>
             <AuthProvider>
                 <NotificationProvider>
+                    <SignalRHandler />
                     <Routes>
                         {/* Rutas públicas */}
                         <Route path="/login" element={<LoginPage />} />
@@ -71,6 +87,46 @@ function App() {
                                 </PrivateRoute>
                             }
                         />
+                        <Route
+                            path="/pago/:idEvento/:monto"
+                            element={
+                                    <MainLayout>
+                                        <PagoPage />
+                                    </MainLayout>
+                            }
+                        />
+                       <Route
+                            path="/generarCupon"
+                            element={
+                                <MainLayout>
+                                    <GenerarNuevoCupon />
+                                </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="/misEncuestas"
+                            element={
+                                <MainLayout>
+                                    <SurveysPage />
+                                </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="/encuesta/respuesta/:idSurvey"
+                            element={
+                                <MainLayout>
+                                    <AnswerSurveyPage />
+                                </MainLayout>
+                            }
+                        />
+                        <Route
+                            path="/encuesta/resultado/:eventId"
+                            element={
+                                <MainLayout>
+                                    <RespuestasEncuestasPage />
+                                </MainLayout>
+                            }
+                        />
 
                         {/* Rutas protegidas - organizador */}
                         <Route
@@ -78,6 +134,14 @@ function App() {
                             element={
                                 <PrivateRoute requiredRole="Organizador">
                                     <OrganizadorDashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/organizador/mis-eventos"
+                            element={
+                                <PrivateRoute requiredRole="Organizador">
+                                    <MisEventosOrganizadorPage />
                                 </PrivateRoute>
                             }
                         />
@@ -104,6 +168,22 @@ function App() {
                             element={
                                 <PrivateRoute requiredRole="admin">
                                     <AdminDashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/eventos"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <AdminEventosPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/venues"
+                            element={
+                                <PrivateRoute requiredRole="admin">
+                                    <AdminVenuesPage />
                                 </PrivateRoute>
                             }
                         />

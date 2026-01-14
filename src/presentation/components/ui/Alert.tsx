@@ -7,9 +7,10 @@ interface AlertProps {
   title?: string
   children: ReactNode
   onClose?: () => void
+  className?: string
 }
 
-export default function Alert({ type, title, children, onClose }: AlertProps) {
+export default function Alert({ type, title, children, onClose, className = "" }: AlertProps) {
   const typeClasses = {
     success: "bg-green-50 border-l-4 border-l-success text-green-800",
     error: "bg-red-50 border-l-4 border-l-danger text-red-800",
@@ -25,11 +26,11 @@ export default function Alert({ type, title, children, onClose }: AlertProps) {
   }
 
   return (
-    <div className={`p-4 rounded-md flex gap-3 ${typeClasses[type]}`}>
+    <div className={`p-4 rounded-md flex gap-3 ${typeClasses[type]} ${className}`}>
       <span className="text-lg flex-shrink-0 font-bold">{iconMap[type]}</span>
       <div className="flex-grow">
         {title && <h4 className="font-semibold mb-1">{title}</h4>}
-        <p className="text-sm">{children}</p>
+        <div className="text-sm">{children}</div>
       </div>
       {onClose && (
         <button onClick={onClose} className="text-lg font-bold opacity-50 hover:opacity-75">
