@@ -56,6 +56,9 @@ export default function DetalleEventoOrganizadorPage() {
     iniciarEvento,
     finalizarEvento,
     subirImagenes,
+    subirImagenPrincipal,
+    subirImagenSecundaria,
+    subirFolleto,
   } = useEventos()
 
   // Estado para modales
@@ -433,7 +436,7 @@ export default function DetalleEventoOrganizadorPage() {
                           if (!id) return
                           setUploadingImages(true)
                           try {
-                            await subirImagenes(id, [selectedPrincipalFile])
+                            await subirImagenPrincipal(id, selectedPrincipalFile)
                             setActionSuccess("¡Imagen principal subida!")
                             setSelectedPrincipalFile(null)
                             await obtenerDetalle(id)
@@ -473,7 +476,7 @@ export default function DetalleEventoOrganizadorPage() {
                         if (!id) return
                         setUploadingImages(true)
                         try {
-                          await subirImagenes(id, selectedSecondaryFiles)
+                          await subirImagenSecundaria(id, selectedSecondaryFiles)
                           setActionSuccess(`¡${selectedSecondaryFiles.length} imagen(es) subidas!`)
                           setSelectedSecondaryFiles([])
                           await obtenerDetalle(id)
@@ -508,7 +511,7 @@ export default function DetalleEventoOrganizadorPage() {
                           if (!id) return
                           setUploadingImages(true)
                           try {
-                            await subirImagenes(id, [selectedBrochureFile])
+                            await subirFolleto(id, selectedBrochureFile)
                             setActionSuccess("¡Folleto subido!")
                             setSelectedBrochureFile(null)
                             await obtenerDetalle(id)

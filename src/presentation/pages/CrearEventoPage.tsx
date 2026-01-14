@@ -39,43 +39,6 @@ const CATEGORIAS = [
 const TIPOS_ASIENTO: TipoAsiento[] = ["General", "Numerado"]
 
 /**
- * Venues (lugares) disponibles para los eventos
- * Lista hardcodeada de lugares con sus GUIDs
- */
-const VENUES = [
-  {
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    nombre: "Teatro Nacional",
-    direccion: "Av. Principal 123, Ciudad",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    nombre: "Estadio Central",
-    direccion: "Calle Deportiva 456, Ciudad",
-  },
-  {
-    id: "770e8400-e29b-41d4-a716-446655440002",
-    nombre: "Centro de Convenciones",
-    direccion: "Boulevard Empresarial 789, Ciudad",
-  },
-  {
-    id: "880e8400-e29b-41d4-a716-446655440003",
-    nombre: "Auditorio Municipal",
-    direccion: "Plaza Central 321, Ciudad",
-  },
-  {
-    id: "990e8400-e29b-41d4-a716-446655440004",
-    nombre: "Arena Deportiva",
-    direccion: "Zona Deportiva 654, Ciudad",
-  },
-  {
-    id: "aa0e8400-e29b-41d4-a716-446655440005",
-    nombre: "Sala de Conciertos",
-    direccion: "Distrito Musical 987, Ciudad",
-  },
-]
-
-/**
  * Plantilla para una nueva sección vacía
  */
 const crearSeccionVacia = (): SeccionEvento => ({
@@ -223,10 +186,11 @@ export default function CrearEventoPage() {
     if (!formData.venueId.trim()) {
       nuevosErrores.venueId = "El lugar es requerido"
     } else {
-      // Validar que venueId sea uno de los venues disponibles
-      const venueExiste = VENUES.some(v => v.id === formData.venueId.trim())
+      // Validar que venueId sea uno de los venues cargados desde el servicio
+      const venueExiste = venues.some(v => v.id === formData.venueId.trim())
       if (!venueExiste) {
-        nuevosErrores.venueId = "Debes seleccionar un lugar válido"
+        nuevosErrores.venueId = "Debes seleccionar un lugar válido de la lista"
+        console.warn("[CrearEvento] VenueId no encontrado en la lista:", formData.venueId)
       }
     }
 
@@ -248,6 +212,9 @@ export default function CrearEventoPage() {
     })
 
     setErrores(nuevosErrores)
+    if (Object.keys(nuevosErrores).length > 0) {
+      console.warn("[CrearEvento] Errores de validación encontrados:", nuevosErrores)
+    }
     return Object.keys(nuevosErrores).length === 0
   }
 
@@ -260,6 +227,11 @@ export default function CrearEventoPage() {
     setSubmitSuccess(false)
 
     if (!validarFormulario()) {
+      setSubmitError("Por favor, corrige los errores en el formulario antes de continuar.")
+      console.warn("[CrearEvento] Validación fallida:", errores)
+
+      // Scroll to top to show the error alert
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
@@ -301,11 +273,11 @@ export default function CrearEventoPage() {
 
       const eventoCreado = await crearEventoConSecciones(datos)
       console.log("[CrearEvento] Evento creado exitosamente:", eventoCreado)
-      
+
       // Mostrar mensaje de éxito
       setSubmitSuccess(true)
       setSubmitError(null)
-      
+
       // Agregar notificación de éxito
       agregarNotificacion(
         NotificationEventType.SISTEMA,
@@ -313,14 +285,14 @@ export default function CrearEventoPage() {
         `El evento "${eventoCreado.nombre}" ha sido creado correctamente. Está en estado Borrador y listo para publicar.`,
         { eventoId: eventoCreado.id, eventoNombre: eventoCreado.nombre }
       )
-      
+
       // Redirigir al dashboard después de 3 segundos (dar tiempo para ver el mensaje)
       setTimeout(() => {
         navigate("/organizador")
       }, 3000)
     } catch (err) {
       console.error("[CrearEvento] Error al crear evento:", err)
-      
+
       // Extraer mensaje de error de forma más robusta
       let errorMessage = "Error al crear el evento"
       if (err instanceof Error) {
@@ -330,10 +302,10 @@ export default function CrearEventoPage() {
       } else if (err && typeof err === 'object' && 'message' in err) {
         errorMessage = String(err.message)
       }
-      
+
       setSubmitError(errorMessage)
       setSubmitSuccess(false)
-      
+
       // Agregar notificación de error
       agregarNotificacion(
         NotificationEventType.SISTEMA,
@@ -341,7 +313,7 @@ export default function CrearEventoPage() {
         errorMessage,
         { error: errorMessage }
       )
-      
+
       // No redirigir si hay error, dejar que el usuario vea el mensaje
     }
   }
@@ -357,9 +329,9 @@ export default function CrearEventoPage() {
         </div>
 
         {submitSuccess && (
-          <Alert 
-            type="success" 
-            title="¡Éxito!" 
+          <Alert
+            type="success"
+            title="¡Éxito!"
             className="mb-6"
             onClose={() => setSubmitSuccess(false)}
           >
@@ -371,9 +343,9 @@ export default function CrearEventoPage() {
         )}
 
         {(submitError || error) && (
-          <Alert 
-            type="error" 
-            title="Error al crear evento" 
+          <Alert
+            type="error"
+            title="Error al crear evento"
             className="mb-6"
             onClose={() => {
               setSubmitError(null)
@@ -391,7 +363,7 @@ export default function CrearEventoPage() {
           {/* Información básica */}
           <Card className="mb-6">
             <h2 className="text-xl font-semibold text-text-primary mb-4">Información Básica</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <FormField label="Nombre del Evento" required error={errores.nombre}>
@@ -471,9 +443,8 @@ export default function CrearEventoPage() {
                   name="venueId"
                   value={formData.venueId}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border border-border rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
-                    errores.venueId ? "border-danger" : ""
-                  }`}
+                  className={`w-full px-3 py-2 border border-border rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${errores.venueId ? "border-danger" : ""
+                    }`}
                 >
                   <option value="">Selecciona un lugar</option>
                   {venues.map((venue) => (
@@ -600,20 +571,20 @@ export default function CrearEventoPage() {
           {/* Botones de acción - Siempre visible al final del formulario */}
           <div className="mt-8 pt-6 border-t-2 border-border-light">
             <div className="flex gap-4 justify-end items-center">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => navigate("/organizador")} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/organizador")}
                 disabled={isLoading}
                 size="lg"
               >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                variant="primary" 
-                size="lg" 
-                loading={isLoading} 
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={isLoading}
                 disabled={isLoading}
                 className="min-w-[180px] font-bold !bg-[#141414]"
               >
