@@ -74,9 +74,15 @@ class ReservasApiAdapter {
    * Usa el cliente de Reservations API (puerto 5010)
    */
   async crearReservaTemporal(request: CrearReservaRequest): Promise<CrearReservaResponse> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reservasApi.ts:76',message:'reservasApi.crearReservaTemporal llamado',data:{eventoId:request.eventoId,asistenteId:request.asistenteId,itemsCount:request.items.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     try {
       // Usar el cliente específico de Reservations API (puerto 5010)
       const response = await this.reservationsClient.post<CrearReservaResponse>("/api/Reservas", request)
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reservasApi.ts:80',message:'POST /api/Reservas completado',data:{reservaId:response.data.reservaId,status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.log("[v0] Reserva temporal creada:", response.data.reservaId, "Expira:", response.data.fechaExpiracion)
       return response.data
     } catch (error: any) {
@@ -145,6 +151,58 @@ class ReservasApiAdapter {
     } catch (error: any) {
       console.error("[v0] Error confirmando reserva:", error)
       throw new Error(error.response?.data?.message || "Error al confirmar la reserva")
+    }
+  }
+
+  /**
+   * Obtiene información del hub SignalR (opcional)
+   * Endpoint: GET /api/Reservas/hub-info
+   */
+  async obtenerHubInfo(): Promise<{ hubUrl?: string; token?: string } | null> {
+    try {
+      const response = await this.reservationsClient.get('/api/Reservas/hub-info')
+      return response.data
+    } catch (error: any) {
+      // Si el endpoint no existe, retornar null (no es crítico)
+      if (error.response?.status === 404) {
+        return null
+      }
+      console.warn('[v0] Error obteniendo hub info:', error)
+      return null
+    }
+  }
+
+  /**
+   * Cancela una reserva temporal
+   * Endpoint: POST /api/Reservas/{reservaId}/cancelar
+   */
+  async cancelarReservaTemporal(reservaId: string, motivo: string): Promise<void> {
+    try {
+      await this.reservationsClient.post(`/api/Reservas/${reservaId}/cancelar`, {
+        reservaId,
+        motivo
+      })
+      console.log('[v0] Reserva temporal cancelada:', reservaId)
+    } catch (error: any) {
+      console.error('[v0] Error cancelando reserva temporal:', error)
+      throw new Error(error.response?.data?.error || error.response?.data?.message || 'Error al cancelar la reserva')
+    }
+  }
+
+  /**
+   * Confirma una reserva temporal después del pago
+   * Endpoint: POST /api/Reservas/{reservaId}/confirmar
+   */
+  async confirmarReservaTemporal(reservaId: string, pagoId: string): Promise<void> {
+    try {
+      await this.reservationsClient.post(`/api/Reservas/${reservaId}/confirmar`, {
+        reservaId,
+        pagoId
+      })
+      console.log('[v0] Reserva temporal confirmada:', reservaId, 'Pago:', pagoId)
+    } catch (error: any) {
+      console.error('[v0] Error confirmando reserva temporal:', error)
+      throw new Error(error.response?.data?.error || error.response?.data?.message || 'Error al confirmar la reserva')
     }
   }
 
