@@ -89,13 +89,11 @@ function App() {
                             }
                         />
                         <Route
-                            path="/pago"
+                            path="/pago/:idEvento/:monto"
                             element={
-                                <PrivateRoute>
                                     <MainLayout>
                                         <PagoPage />
                                     </MainLayout>
-                                </PrivateRoute>
                             }
                         />
                        <Route

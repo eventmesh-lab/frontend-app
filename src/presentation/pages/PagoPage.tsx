@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import useAuth from "../contexts/Auth";
 import PaymentForm from '../components/PagoStripe/PagoStripe';
 import { CreditCard, Check, AlertCircle, Loader2, DollarSign, Wallet, Ticket, Percent } from 'lucide-react';
-import { useReservaSignalR } from '../hooks/useReservaSignalR';
-import CountdownTimer from '../components/common/CountdownTimer';
-import { reservasApi } from '../../adapters/api/reservasApi';
 
 // --- Interfaces ---
 interface MetodoPago {
@@ -36,18 +33,10 @@ interface RegistrarPagoDTO {
 }
 
 const PaymentPage: React.FC = () => {
-    const [searchParams] = useSearchParams();
-    const reservaId = searchParams.get('reservaId');
-    const eventoId = searchParams.get('eventoId');
-    const montoParam = searchParams.get('monto');
-    const eventoNombre = searchParams.get('eventoNombre');
-    const fechaExpiracionParam = searchParams.get('fechaExpiracion');
-    
+    const { idEvento } = useParams<{ idEvento: string }>();
+    const { monto } = useParams<{ monto: string }>();
     const { username, isAuthenticated } = useAuth() as { username: string, isAuthenticated: boolean };
     const navigate = useNavigate();
-    
-    // Suscribirse a actualizaciones en tiempo real de la reserva
-    const { reserva, isConnected, error: signalRError } = useReservaSignalR(reservaId);
 
     // --- Estados ---
     const [loadingMethods, setLoadingMethods] = useState<boolean>(true);
@@ -58,41 +47,7 @@ const PaymentPage: React.FC = () => {
     const [moneda, setMoneda] = useState<string>('USD');
     const [paymentMsg, setPaymentMsg] = useState<{ type: 'success' | 'danger', text: string } | null>(null);
 
-    // Estado para la reserva (se actualiza desde SignalR)
-    const [reservaInfo, setReservaInfo] = useState<{
-      reservaId: string | null
-      fechaExpiracion: string | null
-      montoTotal: number
-      estado: string | null
-    }>({
-      reservaId,
-      fechaExpiracion: fechaExpiracionParam || null,
-      montoTotal: montoParam ? parseFloat(montoParam) : 0,
-      estado: null
-    })
-
-    // Actualizar reservaInfo cuando lleguen actualizaciones desde SignalR
-    useEffect(() => {
-      if (reserva) {
-        setReservaInfo(prev => ({
-          ...prev,
-          montoTotal: reserva.montoTotal || prev.montoTotal,
-          fechaExpiracion: reserva.fechaExpiracion || prev.fechaExpiracion,
-          estado: reserva.estado
-        }))
-      }
-    }, [reserva])
-
-    // Si la reserva expira o se cancela, redirigir
-    useEffect(() => {
-      if (reservaInfo.estado === 'Expirada' || reservaInfo.estado === 'Cancelada') {
-        setTimeout(() => {
-          navigate('/eventos')
-        }, 3000)
-      }
-    }, [reservaInfo.estado, navigate])
-
-    const montoBase = reservaInfo.montoTotal || (montoParam ? parseFloat(montoParam) : 0);
+    const montoBase = monto ? parseFloat(monto) : 0;
     const [coupons, setCoupons] = useState<Coupon[]>([]);
     const [loadingCoupons, setLoadingCoupons] = useState<boolean>(false);
     const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
@@ -160,14 +115,8 @@ const PaymentPage: React.FC = () => {
 
     const handleRealizarPago = async () => {
         setPaymentMsg(null);
-        if (!eventoId || !reservaId || !selectedMethodId || montoFinal <= 0) {
+        if (!idEvento || !selectedMethodId || montoFinal <= 0) {
             setPaymentMsg({ type: 'danger', text: 'Verifica los datos de la reserva o el método de pago.' });
-            return;
-        }
-
-        // Verificar que la reserva no haya expirado
-        if (reservaInfo.estado === 'Expirada' || reservaInfo.estado === 'Cancelada') {
-            setPaymentMsg({ type: 'danger', text: 'La reserva ha expirado o fue cancelada. Por favor, crea una nueva reserva.' });
             return;
         }
 
@@ -177,7 +126,7 @@ const PaymentPage: React.FC = () => {
 
         const payload: RegistrarPagoDTO = {
             stripeMedioPagoId: selectedMethodId,
-            idEvento: eventoId,
+            idEvento: idEvento,
             correo: username,
             moneda: moneda,
             monto: parseFloat(montoFinal.toFixed(2)),
@@ -188,27 +137,15 @@ const PaymentPage: React.FC = () => {
             const response = await axios.post('http://localhost:7183/api/payments/realizarPagoReserva', payload);
 
             if (response.data.exito) {
-                const pagoId = response.data.pagoId || response.data.id;
-                
-                // Confirmar la reserva después del pago exitoso
-                if (reservaId && pagoId) {
-                    try {
-                        await reservasApi.confirmarReservaTemporal(reservaId, pagoId);
-                        console.log('✅ Reserva confirmada después del pago');
-                    } catch (confirmError) {
-                        console.error('Error confirmando reserva:', confirmError);
-                        // No bloquear el flujo si falla la confirmación
-                    }
-                }
-
-                // Mostrar mensaje de éxito
+                // 1. Mostrar mensaje de éxito
                 setPaymentMsg({ type: 'success', text: response.data.mensaje || 'Pago realizado con éxito. Redirigiendo...' });
 
                 fetchCoupons();
                 setSelectedCoupon(null);
 
+
                 setTimeout(() => {
-                    navigate('/mis-reservas');
+                    navigate('/');
                 }, 2000);
 
             } else {
@@ -230,38 +167,9 @@ const PaymentPage: React.FC = () => {
                 {/* Header */}
                 <div className="mb-8 text-center">
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">Finalizar Pago de Reserva</h2>
-                    {eventoNombre && (
-                        <p className="text-gray-600 mb-4">{eventoNombre}</p>
-                    )}
-                    {reservaId && reservaInfo.fechaExpiracion && (
-                        <div className="flex justify-center mb-4">
-                            <CountdownTimer 
-                                fechaExpiracion={reservaInfo.fechaExpiracion}
-                                onExpired={() => {
-                                    setPaymentMsg({ 
-                                        type: 'danger', 
-                                        text: 'La reserva ha expirado. Serás redirigido a la página de eventos.' 
-                                    });
-                                    setTimeout(() => navigate('/eventos'), 3000);
-                                }}
-                            />
-                        </div>
-                    )}
-                    {signalRError && (
-                        <div className="bg-yellow-50 text-yellow-800 text-xs px-3 py-2 rounded-md inline-block mb-2">
-                            ⚠️ No se pueden recibir actualizaciones en tiempo real
-                        </div>
-                    )}
-                    {reservaInfo.estado === 'Expirada' && (
-                        <div className="bg-red-50 text-red-800 text-sm px-4 py-2 rounded-md inline-block mb-2">
-                            ❌ La reserva ha expirado
-                        </div>
-                    )}
-                    {reservaInfo.estado === 'Cancelada' && (
-                        <div className="bg-orange-50 text-orange-800 text-sm px-4 py-2 rounded-md inline-block mb-2">
-                            ⚠️ La reserva ha sido cancelada
-                        </div>
-                    )}
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+
+                    </span>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
