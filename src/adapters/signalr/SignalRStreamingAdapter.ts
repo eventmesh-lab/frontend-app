@@ -7,6 +7,7 @@ export interface StreamingHubCallbacks {
     onError?: (error: string) => void;
     onAccessGranted?: (message: string) => void;
     onSpaceAvailable?: (message: string) => void;
+    onReceiveSignal?: (user: string, signal: string) => void;
 }
 
 export interface ChatMessage {
@@ -27,10 +28,11 @@ export class SignalRStreamingAdapter {
     async connect(callbacks: StreamingHubCallbacks): Promise<void> {
         this.callbacks = callbacks;
 
+        // Use query string for token as per guia-consumo-frontend.md
+        const hubUrlWithToken = `${this.hubUrl}?access_token=${encodeURIComponent(this.accessToken)}`;
+
         this.connection = new HubConnectionBuilder()
-            .withUrl(this.hubUrl, {
-                accessTokenFactory: () => this.accessToken,
-            })
+            .withUrl(hubUrlWithToken)
             .withAutomaticReconnect()
             .configureLogging(LogLevel.Information)
             .build();
@@ -58,6 +60,10 @@ export class SignalRStreamingAdapter {
 
         this.connection.on('SpaceAvailable', (message: string) => {
             this.callbacks.onSpaceAvailable?.(message);
+        });
+
+        this.connection.on('ReceiveSignal', (user: string, signal: string) => {
+            this.callbacks.onReceiveSignal?.(user, signal);
         });
 
         // Start connection
@@ -100,6 +106,16 @@ export class SignalRStreamingAdapter {
             throw new Error('Connection not initialized');
         }
         await this.connection.invoke('SendChatMessage', sessionId, message);
+    }
+
+    /**
+     * Send a signal to another user
+     */
+    async sendSignal(user: string, signal: string): Promise<void> {
+        if (!this.connection) {
+            throw new Error('Connection not initialized');
+        }
+        await this.connection.invoke('SendSignal', user, signal);
     }
 
     /**

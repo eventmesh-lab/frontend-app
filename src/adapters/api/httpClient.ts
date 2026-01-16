@@ -18,6 +18,7 @@ class HttpClient {
     const usersApiUrl = import.meta.env.VITE_USERS_API_URL || 'http://localhost:7181'
     const ticketsApiUrl = import.meta.env.VITE_TICKETS_API_URL || 'http://localhost:5005'
     const reservationsApiUrl = import.meta.env.VITE_RESERVATIONS_API_URL || 'http://localhost:5010'
+    const streamingApiUrl = import.meta.env.VITE_STREAMING_API_URL || 'http://localhost:7001'
     const baseApiUrl = import.meta.env.VITE_API_BASE_URL || eventsApiUrl
 
     // Cliente para Events API
@@ -77,7 +78,7 @@ class HttpClient {
         const authToken = localStorage.getItem('accessToken')
         const keycloakToken = keycloakService.getToken()
         const token = authToken || keycloakToken
-        
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }

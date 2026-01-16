@@ -1,64 +1,146 @@
-import axios from 'axios';
+import { streamingApi } from '../../adapters/api/streamingApi';
+import { streamingTokenStore } from '../../adapters/api/streamingTokenStore';
+import type {
+  CreateSessionRequest,
+  GenerateTokenRequest,
+  StreamAccessResponse,
+  AccessTokenResponse,
+} from '../../domain/entities/streamingTypes';
 
-const API_BASE_URL = import.meta.env.VITE_STREAMING_API_URL || 'https://localhost:7001/api/streaming';
-
-export interface StreamAccessResponse {
-  streamUrl: string;
-  sessionId: string;
-  expiresAt: string;
-  quality: string;
-}
-
-export interface StreamAccessError {
-  message: string;
-}
-
-export class StreamingService {
+/**
+ * Streaming Service
+ * High-level service for managing streaming sessions and access
+ */
+class StreamingService {
   /**
-   * Validates user access to a streaming session
-   * @param eventId - The event ID
-   * @param accessToken - JWT token from Keycloak
-   * @returns Stream access details or throws error
+   * Create a new streaming session
    */
-  async validateAccess(eventId: string, accessToken: string): Promise<StreamAccessResponse> {
+  async createSession(
+    eventId: string,
+    scheduledStartTime: string,
+    maxViewers: number
+  ): Promise<string> {
+    const request: CreateSessionRequest = {
+      eventId,
+      scheduledStartTime,
+      maxViewers,
+    };
+
+    const response = await streamingApi.createSession(request);
+    return response.SessionId;
+  }
+
+  /**
+   * Initialize streaming session for a user
+   * Generates access token and stores it
+   */
+  async initializeSession(
+    sessionId: string,
+    userId: string,
+    reservationId: string
+  ): Promise<AccessTokenResponse> {
+    const request: GenerateTokenRequest = {
+      sessionId,
+      userId,
+      reservationId,
+    };
+
+    const tokenResponse = await streamingApi.generateAccessToken(request);
+
+    // Store tokens for future use
+    streamingTokenStore.setTokens(tokenResponse);
+
+    return tokenResponse;
+  }
+
+  /**
+   * Get stream access with automatic token refresh
+   */
+  async getStreamAccess(eventId: string): Promise<StreamAccessResponse> {
+    // Ensure we have a fresh token
+    const accessToken = await this.ensureFreshToken();
+
+    if (!accessToken) {
+      throw new Error('No valid access token available');
+    }
+
+    return await streamingApi.getStreamAccess(eventId, accessToken);
+  }
+
+  /**
+   * Get validated stream URL
+   */
+  async getValidatedStreamUrl(eventId: string): Promise<string> {
+    const streamAccess = await this.getStreamAccess(eventId);
+    const accessToken = streamingTokenStore.getAccessToken();
+
+    if (!accessToken) {
+      throw new Error('No access token available for validation');
+    }
+
+    const validation = await streamingApi.validateStream(accessToken);
+    return validation.StreamUrl || streamAccess.streamUrl;
+  }
+
+  /**
+   * Ensure token is fresh, refresh if needed
+   * @returns Fresh access token or null if refresh failed
+   */
+  async ensureFreshToken(): Promise<string | null> {
+    const currentToken = streamingTokenStore.getAccessToken();
+
+    // Check if token needs refresh
+    if (!streamingTokenStore.isTokenExpired()) {
+      return currentToken;
+    }
+
+    // Token is expired or about to expire, try to refresh
+    const refreshToken = streamingTokenStore.getRefreshToken();
+
+    if (!refreshToken || streamingTokenStore.isRefreshTokenExpired()) {
+      // Cannot refresh, clear tokens
+      streamingTokenStore.clearTokens();
+      return null;
+    }
+
     try {
-      const response = await axios.get<StreamAccessResponse>(
-        `${API_BASE_URL}/session/${eventId}/access`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw new Error('Failed to validate stream access');
+      const refreshedTokens = await streamingApi.refreshAccessToken({
+        expiredToken: currentToken || '',
+        refreshToken,
+      });
+
+      // Store new tokens
+      streamingTokenStore.setTokens(refreshedTokens);
+
+      return refreshedTokens.token;
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+      streamingTokenStore.clearTokens();
+      return null;
     }
   }
 
   /**
-   * Sends heartbeat to keep session alive
-   * @param sessionId - The session ID
-   * @param accessToken - JWT token
+   * Get current session ID from token store
    */
-  async sendHeartbeat(sessionId: string, accessToken: string): Promise<void> {
-    try {
-      await axios.post(
-        `${API_BASE_URL}/session/${sessionId}/heartbeat`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Failed to send heartbeat:', error);
-    }
+  getCurrentSessionId(): string | null {
+    return streamingTokenStore.getSessionId();
+  }
+
+  /**
+   * Get current user ID from token store
+   */
+  getCurrentUserId(): string | null {
+    return streamingTokenStore.getUserId();
+  }
+
+  /**
+   * Clear all streaming tokens
+   */
+  clearSession(): void {
+    streamingTokenStore.clearTokens();
   }
 }
 
 export const streamingService = new StreamingService();
+
