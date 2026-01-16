@@ -30,6 +30,16 @@ export interface PagarPublicacionDTO {
  * La API ahora devuelve URLs completas de blobs en imagenPrincipalBlob, imagenesSecundariasBlobs y folletoBlob
  */
 function mapEventoFromApi(data: any): EventoEntity {
+  // Logging para depurar el mapeo del folleto
+  if (data.brochureUrl || data.folletoBlob || data.folletoUrl) {
+    console.log("[mapEventoFromApi] Folleto encontrado para evento", data.id, {
+      brochureUrl: data.brochureUrl,
+      folletoBlob: data.folletoBlob,
+      folletoUrl: data.folletoUrl,
+      mapeadoA: data.brochureUrl || data.folletoBlob || data.folletoUrl
+    })
+  }
+
   return new EventoEntity({
     id: data.id,
     nombre: data.nombre,
@@ -54,6 +64,24 @@ function mapEventoFromApi(data: any): EventoEntity {
     folletoUrl: data.brochureUrl || data.folletoBlob || data.folletoUrl,
     fechaCreacion: new Date(data.fechaCreacion || new Date()),
     fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
+    // Nuevos campos
+    motivoCancelacion: data.motivoCancelacion,
+    fechaCancelacion: data.fechaCancelacion ? new Date(data.fechaCancelacion) : undefined,
+    canceladoPor: data.canceladoPor,
+    fechaInicioOriginal: data.fechaInicioOriginal ? new Date(data.fechaInicioOriginal) : undefined,
+    fechaFinOriginal: data.fechaFinOriginal ? new Date(data.fechaFinOriginal) : undefined,
+    contadorReprogramaciones: data.contadorReprogramaciones || 0,
+    ultimaReprogramacionFecha: data.ultimaReprogramacionFecha ? new Date(data.ultimaReprogramacionFecha) : undefined,
+    ultimaReprogramacionPor: data.ultimaReprogramacionPor,
+    inscripcionesCount: data.inscripcionesCount || 0,
+    canBeDeleted: data.canBeDeleted,
+    canBeCancelled: data.canBeCancelled,
+    cancellationDeadline: data.cancellationDeadline ? new Date(data.cancellationDeadline) : undefined,
+    // Campos de restricción de contenido
+    imagenRestringida: data.imagenRestringida,
+    folletoRestringido: data.folletoRestringido,
+    motivoRestriccionImagen: data.motivoRestriccionImagen,
+    motivoRestriccionFolleto: data.motivoRestriccionFolleto,
   })
 }
 
@@ -72,6 +100,27 @@ function mapEventoToApi(evento: Partial<Evento>): any {
     mapped.fechaActualizacion = evento.fechaActualizacion instanceof Date ? evento.fechaActualizacion.toISOString() : evento.fechaActualizacion
   }
   return mapped
+}
+
+/**
+ * Verifica si una respuesta de error del backend indica que la operación fue exitosa
+ * Algunos backends devuelven códigos de error (500) aunque la operación se complete correctamente
+ */
+function esOperacionExitosa(responseData: any): boolean {
+  if (!responseData) return false
+  
+  // Verificar indicadores comunes de éxito
+  return (
+    responseData.exito === true ||
+    responseData.success === true ||
+    responseData.id !== undefined ||
+    responseData.eventoId !== undefined ||
+    responseData.reservaId !== undefined ||
+    (responseData.message && typeof responseData.message === 'string' && 
+     (responseData.message.toLowerCase().includes('éxito') || 
+      responseData.message.toLowerCase().includes('exitoso') ||
+      responseData.message.toLowerCase().includes('success')))
+  )
 }
 
 class EventosApiAdapter {
@@ -198,13 +247,43 @@ class EventosApiAdapter {
     }
   }
 
-  async cancelarEvento(id: string): Promise<void> {
+  async eliminarEvento(id: string): Promise<void> {
     try {
       await this.client.delete(`${this.baseUrl}/${id}`)
-      console.log("[v0] Evento cancelado:", id)
+      console.log("[EventosApi] Evento eliminado físicamente:", id)
     } catch (error: any) {
-      console.error("[v0] Error cancelando evento:", error)
+      console.error("[EventosApi] Error eliminando evento:", error)
+      throw new Error(error.response?.data?.message || "Error al eliminar el evento")
+    }
+  }
+
+  async cancelarEvento(id: string, motivo: string, usuario: string): Promise<void> {
+    try {
+      const payload = {
+        motivo: motivo,
+        canceladoPor: usuario
+      }
+      await this.client.post(`${this.baseUrl}/${id}/cancel`, payload)
+      console.log("[EventosApi] Evento cancelado lógicamente:", id)
+    } catch (error: any) {
+      console.error("[EventosApi] Error cancelando evento:", error)
       throw new Error(error.response?.data?.message || "Error al cancelar el evento")
+    }
+  }
+
+  async reprogramarEvento(id: string, data: { nuevaFecha: Date, nuevasHoras: number, nuevosMinutos: number, usuario: string }): Promise<void> {
+    try {
+      const payload = {
+        nuevaFecha: data.nuevaFecha.toISOString(),
+        nuevasHoras: data.nuevasHoras,
+        nuevosMinutos: data.nuevosMinutos,
+        reprogramadoPor: data.usuario
+      }
+      await this.client.post(`${this.baseUrl}/${id}/reprogramar`, payload)
+      console.log("[EventosApi] Evento reprogramado:", id)
+    } catch (error: any) {
+      console.error("[EventosApi] Error reprogramando evento:", error)
+      throw new Error(error.response?.data?.message || "Error al reprogramar el evento")
     }
   }
 
@@ -289,12 +368,73 @@ class EventosApiAdapter {
 
       console.log("[EventosApi] Pagando publicación:", eventoId, "payload:", payload)
 
-      await this.client.post(`${this.baseUrl}/${eventoId}/pagar-publicacion`, payload)
-      console.log("[EventosApi] Pago de publicación iniciado exitosamente para evento:", eventoId)
+      const response = await this.client.post(`${this.baseUrl}/${eventoId}/pagar-publicacion`, payload)
+      
+      // Si el status es 2xx, la operación fue exitosa
+      if (response.status >= 200 && response.status < 300) {
+        console.log("[EventosApi] Pago de publicación iniciado exitosamente para evento:", eventoId)
+        return
+      }
     } catch (error: any) {
+      // Verificar si el error tiene datos que indiquen éxito
+      // Algunos backends devuelven 500 pero la operación se completa correctamente
+      if (error.response?.data && esOperacionExitosa(error.response.data)) {
+        console.log("[EventosApi] Pago procesado exitosamente (backend devolvió error pero operación fue exitosa):", eventoId)
+        console.warn("[EventosApi] El backend devolvió status", error.response?.status, "pero la operación fue exitosa según los datos de respuesta")
+        return // Operación exitosa a pesar del código de error
+      }
+      
+      // Si es un 500 sin datos de error específicos, podría ser un falso positivo
+      // Verificar si hay algún indicador de éxito en la respuesta
+      if (error.response?.status === 500 && !error.response?.data?.message && !error.response?.data?.error) {
+        console.warn("[EventosApi] Status 500 sin mensaje de error específico. La operación podría haberse completado.")
+        console.warn("[EventosApi] Respuesta completa:", JSON.stringify(error.response?.data, null, 2))
+        // No lanzar error inmediatamente - podría ser un falso positivo
+      }
+
       console.error("[EventosApi] Error pagando publicación:", error)
       console.error("[EventosApi] Error response:", error.response?.data)
-      throw new Error(error.response?.data?.message || "Error al pagar la publicación del evento")
+      console.error("[EventosApi] Error status:", error.response?.status)
+      console.error("[EventosApi] Error completo:", JSON.stringify(error.response?.data, null, 2))
+
+      // Extraer mensaje de error de diferentes formatos posibles del backend
+      let errorMessage = "Error al pagar la publicación del evento"
+      
+      if (error.response?.data) {
+        // Intentar diferentes formatos de respuesta del backend
+        errorMessage = 
+          error.response.data.message || 
+          error.response.data.error || 
+          error.response.data.title ||
+          error.response.data.mensaje ||
+          (typeof error.response.data === 'string' ? error.response.data : errorMessage)
+      }
+
+      // Mensajes específicos según el código de estado
+      if (error.response?.status === 400) {
+        errorMessage = errorMessage || "Datos inválidos. Verifica el monto y el ID de transacción."
+      } else if (error.response?.status === 404) {
+        errorMessage = "Evento no encontrado"
+      } else if (error.response?.status === 403) {
+        errorMessage = "No tienes permisos para realizar esta acción"
+      } else if (error.response?.status === 409) {
+        errorMessage = errorMessage || "El evento no está en estado válido para pagar la publicación"
+      } else if (error.response?.status === 500) {
+        // Para status 500, verificar si realmente hubo un error o si fue exitoso
+        // Si no hay mensaje de error específico, podría ser un falso positivo
+        if (!errorMessage || errorMessage === "Error al pagar la publicación del evento") {
+          console.warn("[EventosApi] Status 500 sin mensaje de error específico. Verificando si la operación fue exitosa...")
+          // No lanzar error si no hay mensaje específico - podría ser un falso positivo
+          // En su lugar, verificar con el backend si la operación fue exitosa
+          errorMessage = "El servidor respondió con un error, pero la operación podría haberse completado. Verifica el estado del evento."
+        } else {
+          errorMessage = errorMessage || "Error en el servidor. Por favor, intenta más tarde."
+        }
+      } else if (!error.response) {
+        errorMessage = "Error de conexión. Verifica tu conexión a internet."
+      }
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -389,6 +529,28 @@ class EventosApiAdapter {
     } catch (error: any) {
       console.error("[EventosApi] Error subiendo folleto:", error)
       throw new Error(error.response?.data?.message || "Error al subir el folleto")
+    }
+  }
+
+  /**
+   * Restringe contenido de un evento (imagen o folleto)
+   * El administrador puede restringir contenido inapropiado
+   */
+  async restringirContenido(eventoId: string, data: { tipoContenido: "imagen" | "folleto", motivo: string }): Promise<void> {
+    try {
+      const payload = {
+        tipoContenido: data.tipoContenido,
+        motivo: data.motivo,
+      }
+
+      console.log("[EventosApi] Restringiendo contenido:", eventoId, payload)
+
+      await this.client.post(`${this.baseUrl}/${eventoId}/restringir-contenido`, payload)
+      console.log("[EventosApi] Contenido restringido exitosamente para evento:", eventoId)
+    } catch (error: any) {
+      console.error("[EventosApi] Error restringiendo contenido:", error)
+      console.error("[EventosApi] Error response:", error.response?.data)
+      throw new Error(error.response?.data?.message || "Error al restringir el contenido")
     }
   }
 

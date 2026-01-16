@@ -15,7 +15,8 @@ import {
     Edit3,
     Ticket,
     UserCircle,
-    ClipboardList // Importamos el icono para encuestas
+    ClipboardList,
+    Tag // Icono adicional para la categoría
 } from "lucide-react"
 
 import { apiConfig } from "../../config/env"
@@ -30,6 +31,7 @@ interface Usuario {
 }
 
 interface Historial {
+    category: string // Agregado según tu DTO
     action: string
     timeDate: string
 }
@@ -68,13 +70,8 @@ export default function PerfilUsuarioPage() {
                         <ShieldCheck className="w-8 h-8 text-red-500" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Acceso Restringido</h2>
-                    <p className="text-gray-500 mb-6">
-                        Necesitas iniciar sesión para acceder a tu perfil de usuario.
-                    </p>
-                    <Link
-                        to="/login"
-                        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-all shadow-md hover:shadow-lg"
-                    >
+                    <p className="text-gray-500 mb-6">Necesitas iniciar sesión para acceder a tu perfil.</p>
+                    <Link to="/login" className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-all shadow-md">
                         Iniciar Sesión
                         <LogOut className="w-4 h-4" />
                     </Link>
@@ -84,7 +81,7 @@ export default function PerfilUsuarioPage() {
     }
 
     if (loading) {
-        return <div className="min-h-screen flex items-center justify-center text-primary">Cargando perfil...</div>
+        return <div className="min-h-screen flex items-center justify-center text-primary font-medium">Cargando perfil...</div>
     }
 
     return (
@@ -93,14 +90,11 @@ export default function PerfilUsuarioPage() {
 
                 {/* Main Profile Card */}
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-
-                    {/* Decorative Header Background */}
                     <div className="h-32 bg-gradient-to-r from-primary to-blue-600 relative">
                         <div className="absolute inset-0 bg-black/10"></div>
                     </div>
 
                     <div className="px-8 pb-8">
-                        {/* Header Section with Avatar */}
                         <div className="relative flex flex-col xl:flex-row items-end xl:items-center justify-between -mt-12 mb-8 gap-4">
                             <div className="flex items-end gap-6">
                                 <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg">
@@ -112,67 +106,31 @@ export default function PerfilUsuarioPage() {
                                     <h1 className="text-3xl font-bold text-gray-900">{userData?.fullName}</h1>
                                     <div className="flex items-center gap-2 text-gray-500 text-sm">
                                         <ShieldCheck className="w-4 h-4 text-primary" />
-                                        <span className="font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                            {role}
-                                        </span>
+                                        <span className="font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">{role}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="flex flex-wrap gap-3 w-full xl:w-auto mt-4 xl:mt-0">
-                                <Link
-                                    to="/actualizarPerfil"
-                                    className="flex-1 xl:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                                >
-                                    <Edit3 className="w-4 h-4" />
-                                    Editar
+                                <Link to="/actualizarPerfil" className="flex-1 xl:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-sm">
+                                    <Edit3 className="w-4 h-4" /> Editar
                                 </Link>
-
-                                {/* NUEVO BOTÓN: Mis Encuestas */}
-                                <Link
-                                    to="/misEncuestas"
-                                    className="flex-1 xl:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                                >
-                                    <ClipboardList className="w-4 h-4" />
-                                    Mis Encuestas
+                                <Link to="/misEncuestas" className="flex-1 xl:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-sm">
+                                    <ClipboardList className="w-4 h-4" /> Mis Encuestas
                                 </Link>
-
-                                <Link
-                                    to="/generarCupon"
-                                    className="flex-1 xl:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
-                                >
-                                    <Ticket className="w-4 h-4" />
-                                    Generar Cupón
+                                <Link to="/generarCupon" className="flex-1 xl:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-sm">
+                                    <Ticket className="w-4 h-4" /> Generar Cupón
                                 </Link>
                             </div>
                         </div>
 
-                        {/* Divider */}
                         <div className="h-px bg-gray-100 w-full mb-8"></div>
 
-                        {/* User Details Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                            <ProfileField
-                                icon={Mail}
-                                label="Correo Electrónico"
-                                value={userData?.email}
-                            />
-                            <ProfileField
-                                icon={Phone}
-                                label="Teléfono"
-                                value={userData?.phoneNumber}
-                            />
-                            <ProfileField
-                                icon={MapPin}
-                                label="Dirección"
-                                value={userData?.address}
-                            />
-                            <ProfileField
-                                icon={Calendar}
-                                label="Fecha de Nacimiento"
-                                value={userData?.birthdate?.slice(0, 10)}
-                            />
+                            <ProfileField icon={Mail} label="Correo Electrónico" value={userData?.email} />
+                            <ProfileField icon={Phone} label="Teléfono" value={userData?.phoneNumber} />
+                            <ProfileField icon={MapPin} label="Dirección" value={userData?.address} />
+                            <ProfileField icon={Calendar} label="Fecha de Nacimiento" value={userData?.birthdate?.slice(0, 10)} />
                         </div>
                     </div>
                 </div>
@@ -194,10 +152,15 @@ export default function PerfilUsuarioPage() {
                                         <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-gray-50 group-[.is-active]:bg-primary text-slate-500 group-[.is-active]:text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                                             <Clock className="w-5 h-5" />
                                         </div>
-                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:border-primary/30 transition-colors">
                                             <div className="flex items-center justify-between space-x-2 mb-1">
                                                 <div className="font-bold text-slate-900">{item.action}</div>
-                                                <time className="font-mono italic text-xs text-primary">{item.timeDate}</time>
+                                                <time className="font-mono italic text-[10px] text-primary bg-primary/5 px-2 py-0.5 rounded-full">{item.timeDate}</time>
+                                            </div>
+                                            {/* Mostramos la categoría del DTO */}
+                                            <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+                                                <Tag className="w-3 h-3" />
+                                                <span>{item.category}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -216,7 +179,6 @@ export default function PerfilUsuarioPage() {
     )
 }
 
-// Helper component
 function ProfileField({ icon: Icon, label, value }: { icon: any, label: string, value?: string }) {
     return (
         <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">

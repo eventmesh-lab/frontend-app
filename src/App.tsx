@@ -31,6 +31,8 @@ import GenerarNuevoCupon from "./presentation/pages/GenerarNuevoCupon"
 import SurveysPage from "./presentation/pages/MisEncuestasPage"
 import AnswerSurveyPage from "./presentation/pages/ResponderEncuestaPage"
 import RespuestasEncuestasPage from "./presentation/pages/RespuestasEncuestasPage"
+import ReportesOrganizadorPage from "./presentation/pages/Reportes"
+import AuditLogsPage from "./presentation/pages/LogsPage"
 
 const SignalRHandler = () => {
     useSignalR(); // Conecta a SignalR
@@ -138,6 +140,14 @@ function App() {
                             }
                         />
                         <Route
+                            path="/organizador/reportes/:eventId"
+                            element={
+                                <PrivateRoute requiredRole="Organizador">
+                                    < ReportesOrganizadorPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
                             path="/organizador/mis-eventos"
                             element={
                                 <PrivateRoute requiredRole="Organizador">
@@ -191,11 +201,9 @@ function App() {
                         <Route
                             path="/perfil"
                             element={
-                                <PrivateRoute>
-                                    <MainLayout>
-                                        <ProfileUserPage />
-                                    </MainLayout>
-                                </PrivateRoute>
+                                <MainLayout>
+                                    <ProfileUserPage />
+                                </MainLayout>
                             }
                         />
                         {/* Rutas protegidas  */}
@@ -237,6 +245,13 @@ function App() {
                                     <RegisterUserOrganizerPage />
                                 </PrivateRoute>
 
+                            }
+                        />
+                        <Route path="/admin/logs"
+                            element={
+                                <MainLayout>
+                                    <AuditLogsPage />
+                                </MainLayout>
                             }
                         />
 

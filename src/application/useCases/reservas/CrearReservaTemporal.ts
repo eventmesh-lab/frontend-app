@@ -20,6 +20,9 @@ export interface CrearReservaTemporalDTO {
  */
 export class CrearReservaTemporalUseCase {
   async ejecutar(data: CrearReservaTemporalDTO): Promise<CrearReservaResponse> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CrearReservaTemporal.ts:22',message:'CrearReservaTemporalUseCase.ejecutar llamado',data:{eventoId:data.eventoId,asistenteId:data.asistenteId,cantidad:data.cantidad},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Generar GUID determinístico a partir del email si no es un GUID válido
     let asistenteId = data.asistenteId
     if (!isValidGuid(data.asistenteId)) {
@@ -79,9 +82,18 @@ export class CrearReservaTemporalUseCase {
     }
 
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CrearReservaTemporal.ts:82',message:'Llamando a reservasApi.crearReservaTemporal',data:{reservaId:request.eventoId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       const result = await reservasApi.crearReservaTemporal(request)
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CrearReservaTemporal.ts:85',message:'Reserva creada exitosamente',data:{reservaId:result.reservaId,fechaExpiracion:result.fechaExpiracion},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       return result
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CrearReservaTemporal.ts:89',message:'Error al crear reserva',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       throw error
     }
   }

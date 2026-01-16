@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import useAuth from "../contexts/Auth"
 import { useEventos } from "../hooks/useEventos"
@@ -19,26 +19,39 @@ import { Link } from "react-router-dom"
 export default function MisEventosOrganizadorPage() {
   const navigate = useNavigate()
   const { username, isAuthenticated } = useAuth()
-  const { eventos, isLoading, error, obtenerMisEventos } = useEventos()
+  const { eventos, isLoading, error, obtenerMisEventos, eliminarEvento, cancelarEvento } = useEventos()
 
   // Cargar eventos del organizador usando el email convertido a GUID determinístico
-  useEffect(() => {
+  const cargarEventos = useCallback(() => {
     if (username && isAuthenticated) {
-      try {
-        // Convertir el email a un GUID determinístico para usar como organizadorId
-        const organizadorId = getUserIdFromEmail(username)
-        console.log("[MisEventosOrganizador] Cargando eventos para organizador:", organizadorId, "(email:", username, ")")
-        obtenerMisEventos(organizadorId).catch((err) => {
-          console.error("[MisEventosOrganizador] Error cargando eventos:", err)
-          // No bloquear el acceso si hay un error - simplemente mostrar el error
-          // El componente mostrará el EmptyState si no hay eventos o el error si hay uno
-        })
-      } catch (err) {
-        console.error("[MisEventosOrganizador] Error generando ID desde email:", err)
-        // No bloquear el acceso si hay un error al generar el ID
-      }
+      const organizadorId = getUserIdFromEmail(username)
+      obtenerMisEventos(organizadorId).catch((err) => {
+        console.error("[MisEventosOrganizador] Error cargando eventos:", err)
+      })
     }
   }, [username, isAuthenticated, obtenerMisEventos])
+
+  useEffect(() => {
+    cargarEventos()
+  }, [cargarEventos])
+
+  const handleDelete = async (id: string) => {
+    try {
+      await eliminarEvento(id)
+      cargarEventos()
+    } catch (err) {
+      console.error("Error al eliminar:", err)
+    }
+  }
+
+  const handleCancel = async (id: string, motivo: string) => {
+    try {
+      await cancelarEvento(id, motivo, username || "unknown")
+      cargarEventos()
+    } catch (err) {
+      console.error("Error al cancelar:", err)
+    }
+  }
 
   return (
     <OrganizadorLayout>
@@ -91,9 +104,11 @@ export default function MisEventosOrganizadorPage() {
                   key={evento.id}
                   evento={evento}
                   showActions={true}
+                  isLoading={isLoading}
                   onEdit={(evento) => navigate(`/organizador/evento/${evento.id}`)}
                   onPublish={(eventoId) => navigate(`/organizador/evento/${eventoId}`)}
-                  onCancel={(eventoId) => navigate(`/organizador/evento/${eventoId}`)}
+                  onCancel={handleCancel}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>

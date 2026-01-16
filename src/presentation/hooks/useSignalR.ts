@@ -16,8 +16,15 @@ export const useSignalR = () => {
 
         console.log(`🔌 Iniciando conexión para: ${username}`);
 
+        // Usar URL relativa para que use el proxy de Vite en desarrollo
+        // En producción, usar la URL absoluta desde la variable de entorno
+        const signalRUrl = import.meta.env.VITE_SIGNALR_URL || 
+          (import.meta.env.DEV ? "/notifications" : "http://localhost:7184/hubs/notifications")
+        
         const newConnection = new HubConnectionBuilder()
-            .withUrl("http://localhost:7184/hubs/notifications")
+            .withUrl(signalRUrl, {
+              accessTokenFactory: () => accessToken || ""
+            })
             .withAutomaticReconnect()
             .configureLogging(LogLevel.Information)
             .build();
@@ -38,8 +45,13 @@ export const useSignalR = () => {
                 await newConnection.invoke("RegistrarUsuario", username);
                 console.log("✅ FRONTEND: Registro enviado correctamente.");
 
-            } catch (err) {
-                console.error("❌ ERROR FATAL EN SIGNALR:", err);
+            } catch (err: any) {
+                // SignalR es opcional - la app funciona sin él
+                // Solo loguear en modo desarrollo para debugging
+                if (import.meta.env.DEV) {
+                    console.warn("⚠️ SignalR no disponible (opcional):", err.message || err);
+                }
+                // No propagar el error - la aplicación continúa normalmente
             }
         };
 
@@ -48,7 +60,10 @@ export const useSignalR = () => {
         setConnection(newConnection);
 
         return () => {
-            newConnection.stop();
+            // Detener conexión de forma segura
+            newConnection.stop().catch(() => {
+                // Ignorar errores al detener - no es crítico
+            });
         };
 
     }, [isAuthenticated, username]); // Si 'username' cambia, se reconecta

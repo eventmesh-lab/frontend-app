@@ -13,6 +13,14 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    proxy: {
+      '/notifications': {
+        target: 'http://localhost:7184',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/notifications/, '/hubs/notifications')
+      }
+    }
   },
   build: {
     outDir: 'dist',

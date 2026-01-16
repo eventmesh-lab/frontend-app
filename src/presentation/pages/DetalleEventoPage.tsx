@@ -34,6 +34,9 @@ export default function DetalleEventoPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DetalleEventoPage.tsx:36',message:'useEffect montaje componente - obtenerDetalle',data:{id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     if (id) {
       obtenerDetalle(id).catch((err) => {
         setError("No se pudo cargar el evento")
@@ -117,6 +120,9 @@ export default function DetalleEventoPage() {
   }
 
   const handleReservar = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DetalleEventoPage.tsx:119',message:'handleReservar llamado (click en botón)',data:{isAuthenticated,username},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     if (!isAuthenticated || !username) {
       // Redirigir al login con el estado de retorno para volver después del login
       navigate("/login", { state: { from: { pathname: `/eventos/${id}` } } })
@@ -127,9 +133,12 @@ export default function DetalleEventoPage() {
       setError(null)
       setSuccess(null)
 
-      // Paso 1: Crear reserva
-      const reserva = await crearReserva({
-        asistenteId: usuario.id,
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/7377a1e9-06fd-45ce-a99d-9abb93580ad1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DetalleEventoPage.tsx:131',message:'Antes de llamar a crearReservaTemporalUseCase.ejecutar',data:{eventoId:eventoDetalle?.id,cantidad,seccionSeleccionada},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      // Crear reserva temporal según la guía de API
+      const reservaTemporal = await crearReservaTemporalUseCase.ejecutar({
+        asistenteId: username,
         eventoId: eventoDetalle.id,
         cantidad,
         seccionId: seccionSeleccionada || undefined,
@@ -138,7 +147,7 @@ export default function DetalleEventoPage() {
       })
 
       // Redirigir a la página de pago con los parámetros necesarios
-      navigate(`/pago?reservaId=${reservaTemporal.reservaId}&eventoId=${eventoDetalle.id}&monto=${reservaTemporal.montoTotal}&eventoNombre=${encodeURIComponent(eventoDetalle.nombre)}`)
+      navigate(`/pago?reservaId=${reservaTemporal.reservaId}&eventoId=${eventoDetalle.id}&monto=${reservaTemporal.montoTotal}&eventoNombre=${encodeURIComponent(eventoDetalle.nombre)}&fechaExpiracion=${encodeURIComponent(reservaTemporal.fechaExpiracion)}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear la reserva temporal")
     }
