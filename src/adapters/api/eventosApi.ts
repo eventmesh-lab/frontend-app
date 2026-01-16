@@ -54,6 +54,19 @@ function mapEventoFromApi(data: any): EventoEntity {
     folletoUrl: data.brochureUrl || data.folletoBlob || data.folletoUrl,
     fechaCreacion: new Date(data.fechaCreacion || new Date()),
     fechaActualizacion: new Date(data.fechaActualizacion || new Date()),
+    // Nuevos campos
+    motivoCancelacion: data.motivoCancelacion,
+    fechaCancelacion: data.fechaCancelacion ? new Date(data.fechaCancelacion) : undefined,
+    canceladoPor: data.canceladoPor,
+    fechaInicioOriginal: data.fechaInicioOriginal ? new Date(data.fechaInicioOriginal) : undefined,
+    fechaFinOriginal: data.fechaFinOriginal ? new Date(data.fechaFinOriginal) : undefined,
+    contadorReprogramaciones: data.contadorReprogramaciones || 0,
+    ultimaReprogramacionFecha: data.ultimaReprogramacionFecha ? new Date(data.ultimaReprogramacionFecha) : undefined,
+    ultimaReprogramacionPor: data.ultimaReprogramacionPor,
+    inscripcionesCount: data.inscripcionesCount || 0,
+    canBeDeleted: data.canBeDeleted,
+    canBeCancelled: data.canBeCancelled,
+    cancellationDeadline: data.cancellationDeadline ? new Date(data.cancellationDeadline) : undefined,
   })
 }
 
@@ -198,13 +211,43 @@ class EventosApiAdapter {
     }
   }
 
-  async cancelarEvento(id: string): Promise<void> {
+  async eliminarEvento(id: string): Promise<void> {
     try {
       await this.client.delete(`${this.baseUrl}/${id}`)
-      console.log("[v0] Evento cancelado:", id)
+      console.log("[EventosApi] Evento eliminado físicamente:", id)
     } catch (error: any) {
-      console.error("[v0] Error cancelando evento:", error)
+      console.error("[EventosApi] Error eliminando evento:", error)
+      throw new Error(error.response?.data?.message || "Error al eliminar el evento")
+    }
+  }
+
+  async cancelarEvento(id: string, motivo: string, usuario: string): Promise<void> {
+    try {
+      const payload = {
+        motivo: motivo,
+        canceladoPor: usuario
+      }
+      await this.client.post(`${this.baseUrl}/${id}/cancel`, payload)
+      console.log("[EventosApi] Evento cancelado lógicamente:", id)
+    } catch (error: any) {
+      console.error("[EventosApi] Error cancelando evento:", error)
       throw new Error(error.response?.data?.message || "Error al cancelar el evento")
+    }
+  }
+
+  async reprogramarEvento(id: string, data: { nuevaFecha: Date, nuevasHoras: number, nuevosMinutos: number, usuario: string }): Promise<void> {
+    try {
+      const payload = {
+        nuevaFecha: data.nuevaFecha.toISOString(),
+        nuevasHoras: data.nuevasHoras,
+        nuevosMinutos: data.nuevosMinutos,
+        reprogramadoPor: data.usuario
+      }
+      await this.client.post(`${this.baseUrl}/${id}/reprogramar`, payload)
+      console.log("[EventosApi] Evento reprogramado:", id)
+    } catch (error: any) {
+      console.error("[EventosApi] Error reprogramando evento:", error)
+      throw new Error(error.response?.data?.message || "Error al reprogramar el evento")
     }
   }
 
@@ -294,7 +337,37 @@ class EventosApiAdapter {
     } catch (error: any) {
       console.error("[EventosApi] Error pagando publicación:", error)
       console.error("[EventosApi] Error response:", error.response?.data)
-      throw new Error(error.response?.data?.message || "Error al pagar la publicación del evento")
+      console.error("[EventosApi] Error status:", error.response?.status)
+      console.error("[EventosApi] Error completo:", JSON.stringify(error.response?.data, null, 2))
+
+      // Extraer mensaje de error de diferentes formatos posibles del backend
+      let errorMessage = "Error al pagar la publicación del evento"
+      
+      if (error.response?.data) {
+        // Intentar diferentes formatos de respuesta del backend
+        errorMessage = 
+          error.response.data.message || 
+          error.response.data.error || 
+          error.response.data.title ||
+          (typeof error.response.data === 'string' ? error.response.data : errorMessage)
+      }
+
+      // Mensajes específicos según el código de estado
+      if (error.response?.status === 400) {
+        errorMessage = errorMessage || "Datos inválidos. Verifica el monto y el ID de transacción."
+      } else if (error.response?.status === 404) {
+        errorMessage = "Evento no encontrado"
+      } else if (error.response?.status === 403) {
+        errorMessage = "No tienes permisos para realizar esta acción"
+      } else if (error.response?.status === 409) {
+        errorMessage = errorMessage || "El evento no está en estado válido para pagar la publicación"
+      } else if (error.response?.status === 500) {
+        errorMessage = "Error en el servidor. Por favor, intenta más tarde."
+      } else if (!error.response) {
+        errorMessage = "Error de conexión. Verifica tu conexión a internet."
+      }
+
+      throw new Error(errorMessage)
     }
   }
 

@@ -13,6 +13,8 @@ import Alert from "../components/ui/Alert"
 import Modal from "../components/ui/Modal"
 import Input from "../components/ui/Input"
 import FormField from "../components/ui/FormField"
+import ConfirmDeleteModal from "../components/eventos/ConfirmDeleteModal"
+import CancelEventModal from "../components/eventos/CancelEventModal"
 import { EstadoEvento } from "../../domain/entities/Evento"
 
 /**
@@ -59,11 +61,15 @@ export default function DetalleEventoOrganizadorPage() {
     subirImagenPrincipal,
     subirImagenSecundaria,
     subirFolleto,
+    eliminarEvento,
+    cancelarEvento,
   } = useEventos()
 
   // Estado para modales
   const [showPagarModal, setShowPagarModal] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState<"iniciar" | "finalizar" | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   // Estado para el formulario de pago
   const [pagoData, setPagoData] = useState({
@@ -109,22 +115,59 @@ export default function DetalleEventoOrganizadorPage() {
    * Maneja el pago de publicación
    */
   const handlePagarPublicacion = async () => {
-    if (!id || !pagoData.transaccionPagoId) {
-      setActionError("ID de transacción requerido")
+    // Validaciones previas
+    if (!id) {
+      setActionError("ID del evento no disponible")
+      return
+    }
+
+    if (!pagoData.transaccionPagoId || pagoData.transaccionPagoId.trim() === "") {
+      setActionError("ID de transacción requerido. Haz clic en 'Generar' para crear uno automáticamente.")
+      return
+    }
+
+    if (!pagoData.monto || pagoData.monto <= 0) {
+      setActionError("El monto debe ser mayor a 0")
+      return
+    }
+
+    if (eventoDetalle && eventoDetalle.tarifaPublicacion && pagoData.monto !== eventoDetalle.tarifaPublicacion) {
+      setActionError(
+        `El monto debe ser exactamente $${eventoDetalle.tarifaPublicacion}. ` +
+        `Monto ingresado: $${pagoData.monto}`
+      )
       return
     }
 
     setActionLoading(true)
     setActionError(null)
+    setActionSuccess(null)
 
     try {
+      console.log("[DetalleEventoOrganizador] Iniciando pago de publicación:", {
+        eventoId: id,
+        transaccionPagoId: pagoData.transaccionPagoId,
+        monto: pagoData.monto,
+        tarifaPublicacion: eventoDetalle?.tarifaPublicacion,
+      })
+
       await pagarPublicacion(id, pagoData.transaccionPagoId, pagoData.monto)
-      setActionSuccess("¡Pago de publicación iniciado exitosamente!")
+      
+      setActionSuccess("¡Pago de publicación iniciado exitosamente! El evento será publicado automáticamente una vez confirmado el pago.")
       setShowPagarModal(false)
-      // Recargar detalle
+      
+      // Limpiar datos del formulario
+      setPagoData({
+        transaccionPagoId: "",
+        monto: eventoDetalle?.tarifaPublicacion || 0,
+      })
+      
+      // Recargar detalle para reflejar el cambio de estado
       await obtenerDetalle(id)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Error al pagar publicación")
+      console.error("[DetalleEventoOrganizador] Error en pago de publicación:", err)
+      const errorMessage = err instanceof Error ? err.message : "Error al pagar la publicación del evento"
+      setActionError(errorMessage)
     } finally {
       setActionLoading(false)
     }
@@ -167,6 +210,48 @@ export default function DetalleEventoOrganizadorPage() {
       await obtenerDetalle(id)
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Error al finalizar evento")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  /**
+   * Maneja la eliminación del evento
+   */
+  const handleEliminarEvento = async () => {
+    if (!id) return
+
+    setActionLoading(true)
+    setActionError(null)
+
+    try {
+      await eliminarEvento(id)
+      setActionSuccess("¡Evento eliminado exitosamente!")
+      setShowDeleteModal(false)
+      navigate("/organizador") // Redirigir al dashboard después de eliminar
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Error al eliminar evento")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  /**
+   * Maneja la cancelación del evento
+   */
+  const handleCancelarEvento = async (motivo: string) => {
+    if (!id) return
+
+    setActionLoading(true)
+    setActionError(null)
+
+    try {
+      await cancelarEvento(id, motivo, username || "unknown")
+      setActionSuccess("¡Evento cancelado exitosamente!")
+      setShowCancelModal(false)
+      await obtenerDetalle(id) // Recargar detalle para reflejar el estado cancelado
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Error al cancelar evento")
     } finally {
       setActionLoading(false)
     }
@@ -376,6 +461,27 @@ export default function DetalleEventoOrganizadorPage() {
               ❌ Este evento ha sido cancelado.
             </div>
           )}
+
+          <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-border-light">
+            {eventoDetalle.canBeCancelled && (
+              <Button
+                variant="outline"
+                onClick={() => setShowCancelModal(true)}
+                className="border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                ❌ Cancelar Evento
+              </Button>
+            )}
+            {eventoDetalle.canBeDeleted && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(true)}
+                className="border-danger text-danger hover:bg-red-50"
+              >
+                🗑️ Eliminar Evento
+              </Button>
+            )}
+          </div>
         </Card>
 
         {/* Gestión de Imágenes */}
@@ -671,7 +777,10 @@ export default function DetalleEventoOrganizadorPage() {
             </p>
 
             <div className="flex gap-3 justify-end pt-4">
-              <Button variant="outline" onClick={() => setShowConfirmModal(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmModal(null)}
+              >
                 Cancelar
               </Button>
               <Button
@@ -684,8 +793,25 @@ export default function DetalleEventoOrganizadorPage() {
             </div>
           </div>
         </Modal>
+
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleEliminarEvento}
+          eventName={eventoDetalle.nombre}
+          isLoading={actionLoading}
+        />
+
+        <CancelEventModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={handleCancelarEvento}
+          eventName={eventoDetalle.nombre}
+          registrationsCount={eventoDetalle.inscripcionesCount}
+          eventDate={eventoDetalle.fecha}
+          isLoading={actionLoading}
+        />
       </div >
     </OrganizadorLayout >
   )
 }
-

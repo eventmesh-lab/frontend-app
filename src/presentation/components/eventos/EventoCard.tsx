@@ -2,6 +2,9 @@ import { EstadoEvento, EventoEntity } from "../../../domain/entities/Evento"
 import { Link } from "react-router-dom"
 import Badge from "../ui/Badge"
 import Card from "../ui/Card"
+import React from "react"
+import ConfirmDeleteModal from "./ConfirmDeleteModal"
+import CancelEventModal from "./CancelEventModal"
 
 interface EventoCardProps {
   evento: EventoEntity
@@ -9,7 +12,9 @@ interface EventoCardProps {
   showActions?: boolean
   onEdit?: (evento: EventoEntity) => void
   onPublish?: (eventoId: string) => void
-  onCancel?: (eventoId: string) => void
+  onCancel?: (eventoId: string, motivo: string) => void
+  onDelete?: (eventoId: string) => void
+  isLoading?: boolean
 }
 
 export default function EventoCard({
@@ -19,11 +24,17 @@ export default function EventoCard({
   onEdit,
   onPublish,
   onCancel,
+  onDelete,
+  isLoading = false,
 }: EventoCardProps) {
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false)
+  const [showCancelModal, setShowCancelModal] = React.useState(false)
+
   const porcentajeOcupacion = evento.obtenerPorcentajeOcupacion()
   const estadoBadgeVariant = {
     [EstadoEvento.PUBLICADO]: "success",
     [EstadoEvento.BORRADOR]: "warning",
+    [EstadoEvento.PENDIENTE_PAGO]: "warning",
     [EstadoEvento.CANCELADO]: "danger",
     [EstadoEvento.EN_CURSO]: "info",
     [EstadoEvento.FINALIZADO]: "info",
@@ -98,22 +109,58 @@ export default function EventoCard({
                 onClick={() => onEdit(evento)}
                 className="px-3 py-2 border border-border-light text-text-secondary rounded-md text-sm hover:bg-bg-secondary transition-colors"
                 title="Editar"
+                disabled={isLoading}
               >
                 ✏️
               </button>
             )}
-            {onCancel && (
+            {evento.canBeCancelled && onCancel && (
               <button
-                onClick={() => onCancel(evento.id)}
-                className="px-3 py-2 border border-danger text-danger rounded-md text-sm hover:bg-red-50 transition-colors"
-                title="Cancelar"
+                onClick={() => setShowCancelModal(true)}
+                className="px-3 py-2 border border-amber-500 text-amber-600 rounded-md text-sm hover:bg-amber-50 transition-colors"
+                title="Cancelar Evento"
+                disabled={isLoading}
               >
-                ✕
+                ❌
+              </button>
+            )}
+            {evento.canBeDeleted && onDelete && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="px-3 py-2 border border-danger text-danger rounded-md text-sm hover:bg-red-50 transition-colors"
+                title="Eliminar Evento"
+                disabled={isLoading}
+              >
+                🗑️
               </button>
             )}
           </>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => {
+          onDelete(evento.id)
+          setShowDeleteModal(false)
+        }}
+        eventName={evento.nombre}
+        isLoading={isLoading}
+      />
+
+      <CancelEventModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={(motivo) => {
+          onCancel(evento.id, motivo)
+          setShowCancelModal(false)
+        }}
+        eventName={evento.nombre}
+        registrationsCount={evento.inscripcionesCount}
+        eventDate={evento.fecha}
+        isLoading={isLoading}
+      />
     </Card>
   )
 }

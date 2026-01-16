@@ -46,6 +46,21 @@ export interface Evento {
   folletoUrl?: string // URL completa del folleto PDF en blob storage
   fechaCreacion: Date
   fechaActualizacion: Date
+  // Campos de cancelación
+  motivoCancelacion?: string
+  fechaCancelacion?: Date
+  canceladoPor?: string
+  // Campos de reprogramación
+  fechaInicioOriginal?: Date
+  fechaFinOriginal?: Date
+  contadorReprogramaciones: number
+  ultimaReprogramacionFecha?: Date
+  ultimaReprogramacionPor?: string
+  // Campos de UI y estadísticas
+  inscripcionesCount: number
+  canBeDeleted: boolean
+  canBeCancelled: boolean
+  cancellationDeadline?: Date
 }
 
 export class EventoEntity implements Evento {
@@ -71,6 +86,21 @@ export class EventoEntity implements Evento {
   folletoUrl?: string // URL completa del folleto PDF en blob storage
   fechaCreacion: Date
   fechaActualizacion: Date
+  // Campos de cancelación
+  motivoCancelacion?: string
+  fechaCancelacion?: Date
+  canceladoPor?: string
+  // Campos de reprogramación
+  fechaInicioOriginal?: Date
+  fechaFinOriginal?: Date
+  contadorReprogramaciones: number = 0
+  ultimaReprogramacionFecha?: Date
+  ultimaReprogramacionPor?: string
+  // Campos de UI y estadísticas
+  inscripcionesCount: number = 0
+  canBeDeleted: boolean = false
+  canBeCancelled: boolean = false
+  cancellationDeadline?: Date
 
   constructor(data: Evento) {
     this.id = data.id
@@ -95,6 +125,18 @@ export class EventoEntity implements Evento {
     this.folletoUrl = data.folletoUrl
     this.fechaCreacion = data.fechaCreacion
     this.fechaActualizacion = data.fechaActualizacion
+    this.motivoCancelacion = data.motivoCancelacion
+    this.fechaCancelacion = data.fechaCancelacion
+    this.canceladoPor = data.canceladoPor
+    this.fechaInicioOriginal = data.fechaInicioOriginal
+    this.fechaFinOriginal = data.fechaFinOriginal
+    this.contadorReprogramaciones = data.contadorReprogramaciones || 0
+    this.ultimaReprogramacionFecha = data.ultimaReprogramacionFecha
+    this.ultimaReprogramacionPor = data.ultimaReprogramacionPor
+    this.inscripcionesCount = data.inscripcionesCount || 0
+    this.canBeDeleted = !!data.canBeDeleted
+    this.canBeCancelled = !!data.canBeCancelled
+    this.cancellationDeadline = data.cancellationDeadline
   }
 
   estaPublicado(): boolean {

@@ -5,8 +5,11 @@ import { publicarEventoUseCase } from "../../application/useCases/eventos/Public
 import { obtenerEventosUseCase, type FiltrosEvento } from "../../application/useCases/eventos/ObtenerEventos"
 import { obtenerDetalleEventoUseCase } from "../../application/useCases/eventos/ObtenerDetalleEvento"
 import { obtenerMisEventosUseCase } from "../../application/useCases/eventos/ObtenerMisEventos"
+import { obtenerTodosEventosUseCase } from "../../application/useCases/eventos/ObtenerTodosEventos"
 import { editarEventoUseCase, type EditarEventoDTO } from "../../application/useCases/eventos/EditarEvento"
 import { cancelarEventoUseCase } from "../../application/useCases/eventos/CancelarEvento"
+import { eliminarEventoUseCase } from "../../application/useCases/eventos/EliminarEvento"
+import { reprogramarEventoUseCase, type ReprogramarEventoDTO } from "../../application/useCases/eventos/ReprogramarEvento"
 import { pagarPublicacionEventoUseCase, type PagarPublicacionDTO } from "../../application/useCases/eventos/PagarPublicacionEvento"
 import { iniciarEventoUseCase } from "../../application/useCases/eventos/IniciarEvento"
 import { finalizarEventoUseCase } from "../../application/useCases/eventos/FinalizarEvento"
@@ -40,10 +43,13 @@ interface UseEventosReturn {
   iniciarEvento: (eventoId: string) => Promise<void>
   finalizarEvento: (eventoId: string) => Promise<void>
   obtenerEventos: (filtros?: FiltrosEvento) => Promise<void>
+  obtenerTodosEventos: () => Promise<void>
   obtenerDetalle: (eventoId: string) => Promise<void>
   obtenerMisEventos: (organizadorId: string) => Promise<void>
   editarEvento: (eventoId: string, datos: EditarEventoDTO) => Promise<void>
-  cancelarEvento: (eventoId: string) => Promise<void>
+  cancelarEvento: (eventoId: string, motivo: string, usuario: string) => Promise<void>
+  eliminarEvento: (eventoId: string) => Promise<void>
+  reprogramarEvento: (data: ReprogramarEventoDTO) => Promise<void>
   subirImagenes: (eventoId: string, archivos: File[]) => Promise<string[]>
   subirImagenPrincipal: (eventoId: string, archivo: File) => Promise<string>
   subirImagenSecundaria: (eventoId: string, archivos: File[]) => Promise<string[]>
@@ -167,6 +173,20 @@ export function useEventos(): UseEventosReturn {
     }
   }, [])
 
+  const obtenerTodosEventos = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const resultado = await obtenerTodosEventosUseCase.ejecutar()
+      setEventos(resultado)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error obteniendo todos los eventos")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   const obtenerDetalle = useCallback(async (eventoId: string) => {
     setIsLoading(true)
     setError(null)
@@ -208,13 +228,39 @@ export function useEventos(): UseEventosReturn {
     }
   }, [])
 
-  const cancelarEvento = useCallback(async (eventoId: string) => {
+  const cancelarEvento = useCallback(async (eventoId: string, motivo: string, usuario: string) => {
     setIsLoading(true)
     setError(null)
     try {
-      await cancelarEventoUseCase.ejecutar(eventoId)
+      await cancelarEventoUseCase.ejecutar(eventoId, motivo, usuario)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error cancelando evento")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const eliminarEvento = useCallback(async (eventoId: string) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      await eliminarEventoUseCase.ejecutar(eventoId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error eliminando evento")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const reprogramarEvento = useCallback(async (data: ReprogramarEventoDTO) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      await reprogramarEventoUseCase.ejecutar(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error reprogramando evento")
       throw err
     } finally {
       setIsLoading(false)
@@ -295,10 +341,13 @@ export function useEventos(): UseEventosReturn {
     iniciarEvento,
     finalizarEvento,
     obtenerEventos,
+    obtenerTodosEventos,
     obtenerDetalle,
     obtenerMisEventos,
     editarEvento,
     cancelarEvento,
+    eliminarEvento,
+    reprogramarEvento,
     limpiar,
     subirImagenes,
     subirImagenPrincipal,

@@ -11,38 +11,31 @@ import { eventosApi } from "../../adapters/api/eventosApi"
 import { EventoEntity, EstadoEvento } from "../../domain/entities/Evento"
 import { Eye, Calendar, MapPin, Users, DollarSign, CheckCircle, XCircle, CreditCard, AlertCircle } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { useEventos } from "../hooks/useEventos"
+import useAuth from "../contexts/Auth"
+import ConfirmDeleteModal from "../components/eventos/ConfirmDeleteModal"
+import CancelEventModal from "../components/eventos/CancelEventModal"
 
 /**
  * Página para que el administrador vea todos los eventos y pueda publicarlos
  */
 export default function AdminEventosPage() {
   const navigate = useNavigate()
-  const [eventos, setEventos] = useState<EventoEntity[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { username } = useAuth()
+  const { eventos, isLoading, error, obtenerTodosEventos, eliminarEvento, cancelarEvento, publicarEvento } = useEventos()
   const [publicandoId, setPublicandoId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState<string | null>(null)
 
   /**
-   * Carga todos los eventos
+   * Carga TODOS los eventos del sistema (no solo los publicados)
+   * Esto permite al administrador ver y gestionar eventos en cualquier estado
    */
-  const cargarEventos = async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const todosEventos = await eventosApi.obtenerTodos()
-      setEventos(todosEventos)
-      console.log("[AdminEventos] Eventos cargados:", todosEventos.length)
-    } catch (err) {
-      console.error("[AdminEventos] Error cargando eventos:", err)
-      setError(err instanceof Error ? err.message : "Error al cargar los eventos")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   useEffect(() => {
-    cargarEventos()
-  }, [])
+    obtenerTodosEventos()
+  }, [obtenerTodosEventos])
+
+  const cargarEventos = () => obtenerTodosEventos()
 
   /**
    * Publica un evento que está pagado (tiene transaccionPagoId)
@@ -50,42 +43,36 @@ export default function AdminEventosPage() {
    */
   const handlePublicar = async (eventoId: string) => {
     const evento = eventos.find((e) => e.id === eventoId)
-    
-    if (!evento) {
-      setError("Evento no encontrado")
-      return
-    }
+    if (!evento || !evento.transaccionPagoId) return
 
-    if (!evento.transaccionPagoId) {
-      setError("El evento debe estar pagado antes de publicarse")
-      return
-    }
-
-    // Verificar que el evento no esté ya publicado
-    if (evento.estado === EstadoEvento.PUBLICADO) {
-      setError("El evento ya está publicado")
-      return
-    }
-
-    if (!confirm("¿Estás seguro de que deseas publicar este evento?")) {
-      return
-    }
+    if (!confirm("¿Estás seguro de que deseas publicar este evento?")) return
 
     setPublicandoId(eventoId)
-    setError(null)
-
     try {
-      // Usar el transaccionPagoId del evento como PagoConfirmadoId
-      await eventosApi.publicarEvento(eventoId, evento.transaccionPagoId)
-      console.log("[AdminEventos] Evento publicado:", eventoId, "con pago:", evento.transaccionPagoId)
-      
-      // Recargar eventos para actualizar el estado
-      await cargarEventos()
+      await publicarEvento(eventoId)
+      obtenerTodosEventos()
     } catch (err) {
-      console.error("[AdminEventos] Error publicando evento:", err)
-      setError(err instanceof Error ? err.message : "Error al publicar el evento")
+      console.error("Error al publicar:", err)
     } finally {
       setPublicandoId(null)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await eliminarEvento(id)
+      obtenerTodosEventos()
+    } catch (err) {
+      console.error("Error al eliminar:", err)
+    }
+  }
+
+  const handleCancel = async (id: string, motivo: string) => {
+    try {
+      await cancelarEvento(id, motivo, username || "admin")
+      obtenerTodosEventos()
+    } catch (err) {
+      console.error("Error al cancelar:", err)
     }
   }
 
@@ -285,6 +272,31 @@ export default function AdminEventosPage() {
                         <span className="font-medium">Ya publicado</span>
                       </div>
                     )}
+
+                    <div className="flex gap-2 mt-auto">
+                      {evento.canBeCancelled && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCancelModal(evento.id)}
+                          className="flex-1 border-amber-500 text-amber-600 hover:bg-amber-50"
+                          title="Cancelar Evento"
+                        >
+                          ❌ Cancelar
+                        </Button>
+                      )}
+                      {evento.canBeDeleted && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDeleteModal(evento.id)}
+                          className="flex-1 border-danger text-danger hover:bg-red-50"
+                          title="Eliminar Evento"
+                        >
+                          🗑️ Eliminar
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -292,6 +304,35 @@ export default function AdminEventosPage() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {showDeleteModal && (
+        <ConfirmDeleteModal
+          isOpen={!!showDeleteModal}
+          onClose={() => setShowDeleteModal(null)}
+          onConfirm={() => {
+            handleDelete(showDeleteModal)
+            setShowDeleteModal(null)
+          }}
+          eventName={eventos.find(e => e.id === showDeleteModal)?.nombre || ""}
+          isLoading={isLoading}
+        />
+      )}
+
+      {showCancelModal && (
+        <CancelEventModal
+          isOpen={!!showCancelModal}
+          onClose={() => setShowCancelModal(null)}
+          onConfirm={(motivo) => {
+            handleCancel(showCancelModal, motivo)
+            setShowCancelModal(null)
+          }}
+          eventName={eventos.find(e => e.id === showCancelModal)?.nombre || ""}
+          registrationsCount={eventos.find(e => e.id === showCancelModal)?.inscripcionesCount || 0}
+          eventDate={eventos.find(e => e.id === showCancelModal)?.fecha || new Date()}
+          isLoading={isLoading}
+        />
+      )}
     </AdminLayout>
   )
 }
