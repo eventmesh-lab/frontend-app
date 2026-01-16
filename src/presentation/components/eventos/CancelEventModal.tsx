@@ -44,7 +44,7 @@ export default function CancelEventModal({
                     <Button variant="outline" onClick={onClose} disabled={isLoading}>
                         Volver
                     </Button>
-                    <Button variant="danger" onClick={handleConfirm} isLoading={isLoading}>
+                    <Button variant="danger" onClick={handleConfirm} loading={isLoading}>
                         Confirmar Cancelación
                     </Button>
                 </>

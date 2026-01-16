@@ -7,6 +7,8 @@ import Button from "../components/ui/Button"
 import Alert from "../components/ui/Alert"
 import LoadingSpinner from "../components/ui/LoadingSpinner"
 import Badge from "../components/ui/Badge"
+import Modal from "../components/ui/Modal"
+import FormField from "../components/ui/FormField"
 import { eventosApi } from "../../adapters/api/eventosApi"
 import { EventoEntity, EstadoEvento } from "../../domain/entities/Evento"
 import { Eye, Calendar, MapPin, Users, DollarSign, CheckCircle, XCircle, CreditCard, AlertCircle } from "lucide-react"
@@ -22,10 +24,13 @@ import CancelEventModal from "../components/eventos/CancelEventModal"
 export default function AdminEventosPage() {
   const navigate = useNavigate()
   const { username } = useAuth()
-  const { eventos, isLoading, error, obtenerTodosEventos, eliminarEvento, cancelarEvento, publicarEvento } = useEventos()
+  const { eventos, isLoading, error, obtenerTodosEventos, eliminarEvento, cancelarEvento, publicarEvento, restringirContenido } = useEventos()
   const [publicandoId, setPublicandoId] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null)
   const [showCancelModal, setShowCancelModal] = useState<string | null>(null)
+  const [showRestrictModal, setShowRestrictModal] = useState<{ eventoId: string, tipo: "imagen" | "folleto" } | null>(null)
+  const [restrictMotivo, setRestrictMotivo] = useState("")
+  const [restrictLoading, setRestrictLoading] = useState(false)
 
   /**
    * Carga TODOS los eventos del sistema (no solo los publicados)
@@ -73,6 +78,30 @@ export default function AdminEventosPage() {
       obtenerTodosEventos()
     } catch (err) {
       console.error("Error al cancelar:", err)
+    }
+  }
+
+  const handleRestrictContent = async () => {
+    if (!showRestrictModal || !restrictMotivo || restrictMotivo.trim().length < 10) {
+      alert("El motivo debe tener al menos 10 caracteres")
+      return
+    }
+
+    setRestrictLoading(true)
+    try {
+      await restringirContenido(showRestrictModal.eventoId, {
+        tipoContenido: showRestrictModal.tipo,
+        motivo: restrictMotivo.trim(),
+      })
+      setShowRestrictModal(null)
+      setRestrictMotivo("")
+      obtenerTodosEventos()
+      alert(`Contenido restringido exitosamente. El organizador deberá reemplazarlo.`)
+    } catch (err) {
+      console.error("Error al restringir contenido:", err)
+      alert(err instanceof Error ? err.message : "Error al restringir contenido")
+    } finally {
+      setRestrictLoading(false)
     }
   }
 
@@ -273,6 +302,37 @@ export default function AdminEventosPage() {
                       </div>
                     )}
 
+                    {/* Botones de moderación de contenido */}
+                    {(evento.imagen || evento.folletoUrl) && (
+                      <div className="mb-2 pt-2 border-t border-border-light">
+                        <p className="text-xs text-text-tertiary mb-2">Moderar Contenido:</p>
+                        <div className="flex gap-1">
+                          {evento.imagen && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowRestrictModal({ eventoId: evento.id, tipo: "imagen" })}
+                              className="flex-1 text-xs border-orange-500 text-orange-600 hover:bg-orange-50"
+                              title="Restringir Imagen Principal"
+                            >
+                              🖼️ Restringir Imagen
+                            </Button>
+                          )}
+                          {evento.folletoUrl && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowRestrictModal({ eventoId: evento.id, tipo: "folleto" })}
+                              className="flex-1 text-xs border-orange-500 text-orange-600 hover:bg-orange-50"
+                              title="Restringir Folleto"
+                            >
+                              📄 Restringir Folleto
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex gap-2 mt-auto">
                       {evento.canBeCancelled && (
                         <Button
@@ -304,6 +364,58 @@ export default function AdminEventosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Restricción de Contenido */}
+      {showRestrictModal && (
+        <Modal
+          isOpen={!!showRestrictModal}
+          onClose={() => {
+            setShowRestrictModal(null)
+            setRestrictMotivo("")
+          }}
+          title={`🚫 Restringir ${showRestrictModal.tipo === "imagen" ? "Imagen Principal" : "Folleto"}`}
+        >
+          <div className="space-y-4">
+            <Alert type="warning">
+              Al restringir este contenido, el organizador deberá reemplazarlo antes de poder publicar el evento.
+            </Alert>
+
+            <FormField
+              label="Motivo de la restricción *"
+              description="Explica por qué se restringe este contenido (mínimo 10 caracteres)"
+            >
+              <textarea
+                className="w-full p-3 border border-border-light rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all h-32 resize-none"
+                placeholder="Ej: Contenido inapropiado, viola políticas de la plataforma..."
+                value={restrictMotivo}
+                onChange={(e) => setRestrictMotivo(e.target.value)}
+                disabled={restrictLoading}
+              />
+            </FormField>
+
+            <div className="flex gap-3 justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRestrictModal(null)
+                  setRestrictMotivo("")
+                }}
+                disabled={restrictLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleRestrictContent}
+                loading={restrictLoading}
+                disabled={!restrictMotivo || restrictMotivo.trim().length < 10}
+              >
+                Confirmar Restricción
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modals */}
       {showDeleteModal && (

@@ -138,29 +138,39 @@ export default function EventoCard({
         )}
       </div>
 
-      <ConfirmDeleteModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={() => {
-          onDelete(evento.id)
-          setShowDeleteModal(false)
-        }}
-        eventName={evento.nombre}
-        isLoading={isLoading}
-      />
+      {/* Modal de confirmación de eliminación */}
+      {onDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={async () => {
+            if (onDelete) {
+              await onDelete(evento.id)
+              setShowDeleteModal(false)
+            }
+          }}
+          eventName={evento.nombre}
+          isLoading={isLoading}
+        />
+      )}
 
-      <CancelEventModal
-        isOpen={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
-        onConfirm={(motivo) => {
-          onCancel(evento.id, motivo)
-          setShowCancelModal(false)
-        }}
-        eventName={evento.nombre}
-        registrationsCount={evento.inscripcionesCount}
-        eventDate={evento.fecha}
-        isLoading={isLoading}
-      />
+      {/* Modal de confirmación de cancelación */}
+      {onCancel && (
+        <CancelEventModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={async (motivo) => {
+            if (onCancel) {
+              await onCancel(evento.id, motivo)
+              setShowCancelModal(false)
+            }
+          }}
+          eventName={evento.nombre}
+          registrationsCount={evento.inscripcionesCount}
+          eventDate={evento.fecha}
+          isLoading={isLoading}
+        />
+      )}
     </Card>
   )
 }

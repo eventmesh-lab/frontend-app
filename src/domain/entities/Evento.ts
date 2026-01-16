@@ -61,6 +61,11 @@ export interface Evento {
   canBeDeleted: boolean
   canBeCancelled: boolean
   cancellationDeadline?: Date
+  // Campos de restricción de contenido (moderación)
+  imagenRestringida?: boolean // Si la imagen principal está restringida por el administrador
+  folletoRestringido?: boolean // Si el folleto está restringido por el administrador
+  motivoRestriccionImagen?: string // Motivo por el cual se restringió la imagen
+  motivoRestriccionFolleto?: string // Motivo por el cual se restringió el folleto
 }
 
 export class EventoEntity implements Evento {
@@ -101,6 +106,11 @@ export class EventoEntity implements Evento {
   canBeDeleted: boolean = false
   canBeCancelled: boolean = false
   cancellationDeadline?: Date
+  // Campos de restricción de contenido (moderación)
+  imagenRestringida: boolean = false
+  folletoRestringido: boolean = false
+  motivoRestriccionImagen?: string
+  motivoRestriccionFolleto?: string
 
   constructor(data: Evento) {
     this.id = data.id
@@ -137,6 +147,10 @@ export class EventoEntity implements Evento {
     this.canBeDeleted = !!data.canBeDeleted
     this.canBeCancelled = !!data.canBeCancelled
     this.cancellationDeadline = data.cancellationDeadline
+    this.imagenRestringida = !!data.imagenRestringida
+    this.folletoRestringido = !!data.folletoRestringido
+    this.motivoRestriccionImagen = data.motivoRestriccionImagen
+    this.motivoRestriccionFolleto = data.motivoRestriccionFolleto
   }
 
   estaPublicado(): boolean {

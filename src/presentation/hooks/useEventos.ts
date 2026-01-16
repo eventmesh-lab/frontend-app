@@ -54,6 +54,7 @@ interface UseEventosReturn {
   subirImagenPrincipal: (eventoId: string, archivo: File) => Promise<string>
   subirImagenSecundaria: (eventoId: string, archivos: File[]) => Promise<string[]>
   subirFolleto: (eventoId: string, archivo: File) => Promise<string>
+  restringirContenido: (eventoId: string, data: RestringirContenidoDTO) => Promise<void>
   limpiar: () => void
 }
 
@@ -329,6 +330,19 @@ export function useEventos(): UseEventosReturn {
     }
   }, [])
 
+  const restringirContenido = useCallback(async (eventoId: string, data: RestringirContenidoDTO) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      await restringirContenidoEventoUseCase.ejecutar(eventoId, data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error restringiendo contenido")
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     eventos,
     eventoDetalle,
@@ -353,5 +367,7 @@ export function useEventos(): UseEventosReturn {
     subirImagenPrincipal,
     subirImagenSecundaria,
     subirFolleto,
+    restringirContenido,
+    limpiar,
   }
 }

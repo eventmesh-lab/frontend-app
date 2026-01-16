@@ -393,12 +393,31 @@ export default function DetalleEventoOrganizadorPage() {
 
           {eventoDetalle.estado === EstadoEvento.BORRADOR && (
             <div className="flex flex-col gap-3">
+              {/* Advertencia si hay contenido restringido */}
+              {(eventoDetalle.imagenRestringida || eventoDetalle.folletoRestringido) && (
+                <Alert type="error" className="mb-3">
+                  <div>
+                    <p className="font-semibold mb-2">⚠️ No puedes publicar este evento</p>
+                    <p className="text-sm mb-1">Tienes contenido restringido que debe ser reemplazado:</p>
+                    <ul className="text-sm list-disc list-inside space-y-1">
+                      {eventoDetalle.imagenRestringida && <li>Imagen principal restringida</li>}
+                      {eventoDetalle.folletoRestringido && <li>Folleto restringido</li>}
+                    </ul>
+                    <p className="text-sm mt-2 font-semibold">Por favor, reemplaza el contenido restringido antes de intentar publicar.</p>
+                  </div>
+                </Alert>
+              )}
               <p className="text-text-secondary mb-2">
                 Tu evento está en borrador. Para publicarlo, debes pagar la tarifa de publicación.
               </p>
               <Button
                 variant="primary"
                 onClick={() => {
+                  // Validar que no haya contenido restringido
+                  if (eventoDetalle.imagenRestringida || eventoDetalle.folletoRestringido) {
+                    setActionError("No puedes pagar la publicación mientras tengas contenido restringido. Por favor, reemplaza el contenido restringido primero.")
+                    return
+                  }
                   // Generar transaccionPagoId automáticamente al abrir el modal
                   const uuid = crypto.randomUUID()
                   setPagoData({
@@ -407,6 +426,7 @@ export default function DetalleEventoOrganizadorPage() {
                   })
                   setShowPagarModal(true)
                 }}
+                disabled={eventoDetalle.imagenRestringida || eventoDetalle.folletoRestringido}
               >
                 💳 Pagar Publicación (${eventoDetalle.tarifaPublicacion || 0})
               </Button>
@@ -491,12 +511,45 @@ export default function DetalleEventoOrganizadorPage() {
           {/* Imágenes existentes */}
           {eventoDetalle.imagen && (
             <div className="mb-6">
-              <h3 className="font-medium text-text-tertiary text-sm mb-2">Imagen Principal</h3>
-              <img
-                src={eventoDetalle.imagen}
-                alt={eventoDetalle.nombre}
-                className="w-full max-w-md h-48 object-cover rounded-lg border border-border"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-text-tertiary text-sm">Imagen Principal</h3>
+                {eventoDetalle.imagenRestringida && (
+                  <Badge variant="danger" className="text-xs">🚫 RESTRINGIDA</Badge>
+                )}
+              </div>
+              {eventoDetalle.imagenRestringida ? (
+                <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+                  <Alert type="error" className="mb-3">
+                    <div>
+                      <p className="font-semibold mb-1">⚠️ Esta imagen ha sido restringida por el administrador</p>
+                      {eventoDetalle.motivoRestriccionImagen && (
+                        <p className="text-sm mb-2">
+                          <strong>Motivo:</strong> {eventoDetalle.motivoRestriccionImagen}
+                        </p>
+                      )}
+                      <p className="text-sm font-semibold text-red-700">
+                        Debes reemplazar esta imagen antes de poder publicar el evento.
+                      </p>
+                    </div>
+                  </Alert>
+                  <div className="relative">
+                    <img
+                      src={eventoDetalle.imagen}
+                      alt={eventoDetalle.nombre}
+                      className="w-full max-w-md h-48 object-cover rounded-lg border-2 border-red-300 opacity-50"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-900/20 rounded-lg">
+                      <span className="text-4xl">🚫</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={eventoDetalle.imagen}
+                  alt={eventoDetalle.nombre}
+                  className="w-full max-w-md h-48 object-cover rounded-lg border border-border"
+                />
+              )}
             </div>
           )}
 
@@ -516,6 +569,91 @@ export default function DetalleEventoOrganizadorPage() {
             </div>
           )}
 
+          {/* Folleto existente - junto con las imágenes */}
+          {eventoDetalle.folletoUrl && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-text-tertiary text-sm">Folleto del Evento</h3>
+                {eventoDetalle.folletoRestringido && (
+                  <Badge variant="danger" className="text-xs">🚫 RESTRINGIDO</Badge>
+                )}
+              </div>
+              <div className={`p-4 rounded-lg ${eventoDetalle.folletoRestringido ? 'bg-red-50 border-2 border-red-300' : 'bg-purple-50 border border-purple-200'}`}>
+                {eventoDetalle.folletoRestringido && (
+                  <Alert type="error" className="mb-3">
+                    <div>
+                      <p className="font-semibold mb-1">⚠️ Este folleto ha sido restringido por el administrador</p>
+                      {eventoDetalle.motivoRestriccionFolleto && (
+                        <p className="text-sm mb-2">
+                          <strong>Motivo:</strong> {eventoDetalle.motivoRestriccionFolleto}
+                        </p>
+                      )}
+                      <p className="text-sm font-semibold text-red-700">
+                        Debes reemplazar este folleto antes de poder publicar el evento.
+                      </p>
+                    </div>
+                  </Alert>
+                )}
+                <div className="flex items-start gap-4 mb-3">
+                  <div className="text-4xl">📄</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-text-primary mb-1">Folleto actual</p>
+                    <p className="text-xs text-text-secondary mb-3 truncate" title={eventoDetalle.folletoUrl}>
+                      {eventoDetalle.folletoUrl}
+                    </p>
+                    <div className="flex gap-2">
+                      <a
+                        href={eventoDetalle.folletoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 transition-colors"
+                      >
+                        <span>🔗</span>
+                        Ver/Descargar
+                      </a>
+                      <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-purple-600 text-purple-600 rounded-md text-sm font-medium hover:bg-purple-50 transition-colors cursor-pointer">
+                        <span>🔄</span>
+                        Cambiar Folleto
+                        <input
+                          type="file"
+                          accept="application/pdf,image/*"
+                          onChange={handleBrochureFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                {selectedBrochureFile && (
+                  <div className="mt-3 pt-3 border-t border-purple-200 flex gap-3 items-center p-3 bg-white rounded-md">
+                    <div className="text-2xl">📄</div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text-primary mb-1">Nuevo folleto seleccionado:</p>
+                      <p className="text-xs text-text-secondary mb-2">{selectedBrochureFile.name}</p>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={async () => {
+                          if (!id) return
+                          setUploadingImages(true)
+                          try {
+                            await subirFolleto(id, selectedBrochureFile)
+                            setActionSuccess("¡Folleto actualizado exitosamente!")
+                            setSelectedBrochureFile(null)
+                            await obtenerDetalle(id)
+                          } catch (err) {
+                            setActionError(err instanceof Error ? err.message : "Error al actualizar el folleto")
+                          } finally {
+                            setUploadingImages(false)
+                          }
+                        }} loading={uploadingImages}>💾 Reemplazar Folleto</Button>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedBrochureFile(null)}>Cancelar</Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Subir nuevas imágenes - Tres secciones separadas */}
           <div className="border-t border-gray-200 pt-6">
             <h3 className="font-semibold text-gray-900 mb-4">Gestionar Imágenes del Evento</h3>
@@ -523,14 +661,24 @@ export default function DetalleEventoOrganizadorPage() {
 
             {/* Nota: Por ahora, el backend maneja todas las imágenes de la misma forma */}
             <div className="space-y-6">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-2">🇺 Imagen Principal</h4>
+              <div className={`p-4 rounded-lg border ${eventoDetalle.imagenRestringida ? 'bg-red-50 border-2 border-red-300' : 'bg-blue-50 border border-blue-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-gray-900">🇺 Imagen Principal</h4>
+                  {eventoDetalle.imagenRestringida && (
+                    <Badge variant="danger" className="text-xs">🚫 REQUIERE REEMPLAZO</Badge>
+                  )}
+                </div>
+                {eventoDetalle.imagenRestringida && (
+                  <Alert type="error" className="mb-3">
+                    <p className="text-sm font-semibold">Esta imagen está restringida. Debes reemplazarla.</p>
+                  </Alert>
+                )}
                 <p className="text-sm text-gray-600 mb-3">La imagen principal se mostrará como portada del evento</p>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handlePrincipalFileSelect}
-                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer"
+                  className={`block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-white hover:file:cursor-pointer ${eventoDetalle.imagenRestringida ? 'file:bg-red-600 hover:file:bg-red-700' : 'file:bg-blue-600 hover:file:bg-blue-700'}`}
                 />
                 {selectedPrincipalFile && (
                   <div className="mt-3 flex gap-3 items-start">
@@ -598,41 +746,49 @@ export default function DetalleEventoOrganizadorPage() {
                 )}
               </div>
 
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <h4 className="font-semibold text-gray-900 mb-2">📄 Folleto del Evento</h4>
-                <p className="text-sm text-gray-600 mb-3">Sube un documento PDF o imagen del folleto</p>
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  onChange={handleBrochureFileSelect}
-                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-purple-600 file:text-white hover:file:bg-purple-700 file:cursor-pointer"
-                />
-                {selectedBrochureFile && (
-                  <div className="mt-3 flex gap-3 items-center p-3 bg-white rounded-md">
-                    <div className="text-3xl">📄</div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{selectedBrochureFile.name}</p>
-                      <div className="flex gap-2 mt-2">
-                        <Button size="sm" onClick={async () => {
-                          if (!id) return
-                          setUploadingImages(true)
-                          try {
-                            await subirFolleto(id, selectedBrochureFile)
-                            setActionSuccess("¡Folleto subido!")
-                            setSelectedBrochureFile(null)
-                            await obtenerDetalle(id)
-                          } catch (err) {
-                            setActionError(err instanceof Error ? err.message : "Error")
-                          } finally {
-                            setUploadingImages(false)
-                          }
-                        }} loading={uploadingImages}>💾 Subir</Button>
-                        <Button size="sm" variant="outline" onClick={() => setSelectedBrochureFile(null)}>Cancelar</Button>
+              {/* Solo mostrar el input de subir folleto si NO existe uno ya */}
+              {!eventoDetalle.folletoUrl && (
+                <div className={`p-4 rounded-lg border ${eventoDetalle.folletoRestringido ? 'bg-red-50 border-2 border-red-300' : 'bg-purple-50 border border-purple-200'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">📄 Folleto del Evento</h4>
+                    {eventoDetalle.folletoRestringido && (
+                      <Badge variant="danger" className="text-xs">🚫 REQUIERE REEMPLAZO</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">Sube un documento PDF o imagen del folleto</p>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={handleBrochureFileSelect}
+                    className={`block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-white hover:file:cursor-pointer ${eventoDetalle.folletoRestringido ? 'file:bg-red-600 hover:file:bg-red-700' : 'file:bg-purple-600 hover:file:bg-purple-700'}`}
+                  />
+                  {selectedBrochureFile && (
+                    <div className="mt-3 flex gap-3 items-center p-3 bg-white rounded-md">
+                      <div className="text-3xl">📄</div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{selectedBrochureFile.name}</p>
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" onClick={async () => {
+                            if (!id) return
+                            setUploadingImages(true)
+                            try {
+                              await subirFolleto(id, selectedBrochureFile)
+                              setActionSuccess("¡Folleto subido!")
+                              setSelectedBrochureFile(null)
+                              await obtenerDetalle(id)
+                            } catch (err) {
+                              setActionError(err instanceof Error ? err.message : "Error")
+                            } finally {
+                              setUploadingImages(false)
+                            }
+                          }} loading={uploadingImages}>💾 Subir</Button>
+                          <Button size="sm" variant="outline" onClick={() => setSelectedBrochureFile(null)}>Cancelar</Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </Card>
