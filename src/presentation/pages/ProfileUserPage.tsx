@@ -21,7 +21,7 @@ import {
 
 import { apiConfig } from "../../config/env"
 
-// Interfaces
+// Interfaces moved outside for cleaner code
 interface Usuario {
     fullName: string
     email: string
@@ -45,25 +45,20 @@ export default function PerfilUsuarioPage() {
     useEffect(() => {
         if (username) {
             setLoading(true)
-
-            // 1. Obtener datos del perfil
-            const fetchUserData = fetch(`${apiConfig.baseUrl}${apiConfig.users.getOne(username)}`).then(res => res.json());
-
-            // 2. Obtener historial (Endpoint solicitado)
-            // Nota: Se asume que apiConfig tiene la ruta o usamos la URL base + el path
-            const fetchHistory = fetch(`http://localhost:7182/api/activityhistory/getHistory/${username}`).then(res => res.json());
-
-            Promise.all([fetchUserData, fetchHistory])
-                .then(([dataUser, dataHistory]) => {
-                    setUserData(dataUser.usuario);
-                    // dataHistory será la List<GetActivityGetByUserEmailResponseDTO> de tu C#
-                    setUserHistory(dataHistory);
+            fetch(`${apiConfig.baseUrl}${apiConfig.users.getOne(username)}`, {
+                method: 'GET',
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    setUserData(data.usuario);
                     setLoading(false)
                 })
                 .catch((error) => {
-                    console.error('Error al obtener datos:', error);
+                    console.error('Error al obtener datos del usuario:', error);
                     setLoading(false)
                 });
+
+            // Fetch historial logic...
         }
     }, [username, role, isAuthenticated]);
 
